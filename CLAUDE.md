@@ -4,64 +4,62 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-CrowPanel is a project targeting the **CrowPanel 7.0" HMI ESP32 Display** — an 800x480 capacitive TFT-LCD touch screen powered by the ESP32-S3-WROOM-1-N4R8 module (dual-core LX6, 240MHz, 4MB Flash, 8MB PSRAM, WiFi + BLE 5.0).
+CrowPanel is an IoT environmental monitoring system built around the **CrowPanel 7.0" HMI ESP32 Display** (800x480 capacitive TFT-LCD, ESP32-S3-WROOM-1-N4R8, dual-core LX6, 240MHz, 4MB Flash, 8MB PSRAM, WiFi + BLE 5.0).
 
 Hardware spec: `doc/panel_spec.md`
 
-## Target Hardware
+## System Architecture
 
-- **MCU:** ESP32-S3-WROOM-1-N4R8
-- **Display:** 7.0" 800x480 TFT-LCD (driver: EK9716BD3 + EK73002ACGB), capacitive touch (GT911 controller)
-- **Connectivity:** WiFi 802.11 b/g/n (2.4GHz), Bluetooth 5.0
-- **Interfaces:** 2x UART0, 2x GPIO, 2x I2C, battery connector, TF card, USB, speaker
-- **Power:** DC 5V-2A or 3.7-4.2V battery
+Two PlatformIO projects communicate via MQTT (HiveMQ Cloud, TLS on port 8883):
 
-## Build Commands (PlatformIO)
+1. **Sensor Node** (`sensor_node/`) — ESP12 (ESP8266) with 3x DHT22 sensors. Two outdoor sensors are averaged into one reading; one enclosure sensor reports separately. Publishes every 5 minutes.
+2. **Display Node** (`display_node/`) — CrowPanel ESP32-S3 with 7" LVGL display. Subscribes to MQTT, shows current outdoor/enclosure readings and 6-hour historical line charts.
 
-The example project lives in `examples/CrowPanel_ESP32_7.0/` and uses PlatformIO with the Arduino framework.
+**MQTT Topics:**
+- `crowpanel/outdoor` — averaged outdoor temp/humidity `{"t":22.3,"h":48.7}`
+- `crowpanel/enclosure` — enclosure temp/humidity `{"t":25.1,"h":35.4}`
+
+## Build Commands
+
+Both projects use PlatformIO with the Arduino framework.
 
 ```bash
-cd examples/CrowPanel_ESP32_7.0
+# Sensor Node (ESP12)
+cd sensor_node
+pio run                          # Build
+pio run --target upload          # Flash
+pio device monitor --baud 115200 # Serial monitor
 
-# Build
-pio run
-
-# Upload to device
-pio run --target upload
-
-# Serial monitor (baud 9600)
-pio device monitor --baud 9600
+# Display Node (CrowPanel ESP32-S3)
+cd display_node
+pio run                          # Build
+pio run --target upload          # Flash
+pio device monitor --baud 9600   # Serial monitor
 ```
 
-The PlatformIO environment is `esp32-s3-devkitc-1-myboard` with a custom board definition (`esp32-s3-devkitc-1-myboard.json`) and partition table (`huge_app.csv`).
+## Credentials
 
-## Architecture
+Both projects require `include/credentials.h` (gitignored). Copy from `include/credentials.h.template` and fill in WiFi and HiveMQ Cloud credentials.
 
-### Example Project (`examples/CrowPanel_ESP32_7.0/`)
+## Sensor Node (`sensor_node/`)
 
-**Stack:** Arduino framework → LVGL 8.3.6 (UI) → LovyanGFX 1.1.12 (display driver) → ESP32-S3 hardware
+- **Platform:** ESP8266 (`esp12e` board)
+- **DHT22 pins:** Outdoor #1 GPIO 4 (D2), Outdoor #2 GPIO 5 (D1), Enclosure GPIO 14 (D5)
+- **Libraries:** PubSubClient (MQTT), DHTesp (sensor reading)
+- **Key file:** `src/main.cpp` — WiFi/MQTT connection, sensor reading with outdoor averaging and fallback, 5-min publish loop
 
-**Key files:**
-- `src/main.cpp` — Entry point. Configures the RGB bus (16-bit parallel) and display panel via LovyanGFX, initializes LVGL display/input drivers, sets up DHT20 sensor, runs the main loop (sensor reads + `lv_timer_handler()`)
-- `include/touch.h` — Touch abstraction layer supporting GT911 (active), FT6X36, and XPT2046 via compile-time `#define` switches. GT911 uses I2C on pins SDA=19, SCL=20
-- `src/ui*.c`, `include/ui*.h` — Auto-generated LVGL UI code from SquareLine Studio. Defines Screen1 with background image, two toggle buttons (on/off icons), and two labels for temperature/humidity
-- `lib/Crowbits_DHT20/` — Custom I2C temperature/humidity sensor library
+## Display Node (`display_node/`)
 
-**Key hardware pins:**
-- GPIO 38: LED output (directly controlled, active high)
-- GPIO 2 (TFT_BL): Display backlight (PWM, 0-255 brightness)
-- I2C: SDA=19, SCL=20 (shared by touch controller and DHT20 sensor)
-- RGB display: 16-bit parallel bus (see pin mapping in `main.cpp` LGFX class)
+- **Platform:** ESP32-S3 with custom board def (`esp32-s3-devkitc-1-myboard.json`) and partition table (`huge_app.csv`), both copied from the example project
+- **Stack:** Arduino → LVGL 8.3.6 (UI) → LovyanGFX 1.1.12 (display driver) → ESP32-S3 hardware
+- **Libraries:** LVGL, LovyanGFX, TAMC_GT911, PubSubClient, ArduinoJson
+- **Key files:**
+  - `src/main.cpp` — LovyanGFX display driver (16-bit RGB parallel bus), LVGL init, touch input, WiFi/MQTT connection with `mqttCallback`
+  - `src/ui.cpp` — Hand-written LVGL UI: status bar, two sensor panels (Outdoor/Enclosure), temperature chart, humidity chart. Charts use `lv_chart` with 72-point sliding window (6h at 5-min intervals), values scaled x10
+  - `include/touch.h` — GT911 capacitive touch driver (I2C SDA=19, SCL=20), copied from example
 
-**Key dependencies** (from `platformio.ini`):
-- `lvgl/lvgl@8.3.6` — Graphics library
-- `lovyan03/LovyanGFX@^1.1.12` — Display driver
-- `tamctec/TAMC_GT911@^1.0.2` — Capacitive touch driver
-- `maxpromer/PCA9557-arduino@^1.0.0` — I/O expander
-- `moononournation/GFX Library for Arduino@1.2.8`
-- `adafruit/Adafruit GFX Library@^1.11.9`
+**Display layout (800x480):** Status bar (30px) → Outdoor + Enclosure panels (120px) → Temperature chart (155px) → Humidity chart (155px). Dark theme, red=outdoor, teal=enclosure.
 
-**Pattern notes:**
-- UI code is generated by SquareLine Studio — edit UI visually there, not by hand-modifying `ui_Screen1.c` etc.
-- Touch driver selection is compile-time via `#define` in `touch.h` (currently GT911 is active)
-- The LVGL draw buffer is statically allocated at `800*480/15` pixels
+## Example Project (`examples/CrowPanel_ESP32_7.0/`)
+
+Vendor-provided example with DHT20 sensor and SquareLine Studio-generated UI. Used as reference for display driver config and pin mappings. UI code in `src/ui*.c` is auto-generated — don't hand-edit.
