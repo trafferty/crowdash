@@ -253,7 +253,14 @@ void setup() {
     connectMQTT();
 }
 
+static uint32_t lv_tick_prev = 0;
+
 void loop() {
+    // Feed LVGL tick — required for UI updates
+    uint32_t now = millis();
+    lv_tick_inc(now - lv_tick_prev);
+    lv_tick_prev = now;
+
     // Reconnect if needed
     if (WiFi.status() != WL_CONNECTED) {
         ui_set_status("WiFi reconnecting...");
