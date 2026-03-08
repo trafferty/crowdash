@@ -1,192 +1,283 @@
 #include "ui.h"
 #include <stdio.h>
 
-// ============================================================
 // Color scheme
-// ============================================================
-#define COLOR_BG        lv_color_hex(0x1A1A2E)
-#define COLOR_PANEL     lv_color_hex(0x16213E)
-#define COLOR_S1_LINE   lv_color_hex(0xFF6B6B)   // Red - Outdoor
-#define COLOR_S2_LINE   lv_color_hex(0x4ECDC4)   // Teal - Enclosure
-#define COLOR_TEXT_DIM   lv_color_hex(0x888888)
-#define COLOR_TEXT_LABEL lv_color_hex(0xAAAAAA)
+#define COLOR_BG           lv_color_hex(0x1A1A50)  // Deep blue
+#define COLOR_PANEL        lv_color_hex(0x16213E)  // Dark panel
+#define COLOR_GARAGE_BG    lv_color_hex(0x3A6EA5)  // Blue garage
+#define COLOR_STATUS_OPEN  lv_color_hex(0xFF6B6B)  // Red (open)
+#define COLOR_STATUS_CLOSED lv_color_hex(0x6FCF97) // Green (closed)
+#define COLOR_OUTDOOR_TEMP lv_color_hex(0xFF6B6B)  // Red
+#define COLOR_OUTDOOR_HUM  lv_color_hex(0x4ECDC4)  // Teal
+#define COLOR_ENCL         lv_color_hex(0x4ECDC4)  // Teal
+#define COLOR_TEXT_PRIMARY lv_color_hex(0xFFFFFF)  // White
+#define COLOR_TEXT_DIM     lv_color_hex(0x888888)  // Gray
+#define COLOR_ICON_PLACEHOLDER lv_color_hex(0xFFD700) // Gold
 
-// ============================================================
-// Chart config
-// ============================================================
 #define CHART_POINTS 72  // 6 hours at 5-min intervals
 
-// ============================================================
 // UI objects
-// ============================================================
 static lv_obj_t *screen;
-static lv_obj_t *lbl_status;
 
-// Current value labels: [0]=outdoor, [1]=enclosure
-static lv_obj_t *lbl_temp[2];
-static lv_obj_t *lbl_hum[2];
+// Clock panel
+static lv_obj_t *panel_clock;
+static lv_obj_t *lbl_time;
+static lv_obj_t *lbl_date;
+static lv_obj_t *lbl_outdoor_temp;
+static lv_obj_t *lbl_enclosure_temp;
+static lv_obj_t *rect_weather_icon;
 
-// Charts
-static lv_obj_t *chart_temp;
-static lv_obj_t *chart_hum;
+// Calendar sidebar
+static lv_obj_t *panel_calendar;
+static lv_obj_t *lbl_calendar_items[10];
 
-// Chart series: [0]=outdoor, [1]=enclosure
-static lv_chart_series_t *ser_temp[2];
-static lv_chart_series_t *ser_hum[2];
+// Forecast panels
+static lv_obj_t *panel_forecast[5];
+static lv_obj_t *lbl_forecast_day[5];
+static lv_obj_t *lbl_forecast_temp[5];
+static lv_obj_t *rect_forecast_icon[5];
 
-// ============================================================
-// Helper: create a sensor info panel
-// ============================================================
-static void create_sensor_panel(lv_obj_t *parent, int idx, const char *name,
-                                 lv_color_t accent, int x_pos) {
-    lv_obj_t *panel = lv_obj_create(parent);
-    lv_obj_set_pos(panel, x_pos, 30);
-    lv_obj_set_size(panel, 392, 115);
-    lv_obj_set_style_bg_color(panel, COLOR_PANEL, 0);
-    lv_obj_set_style_border_width(panel, 0, 0);
-    lv_obj_set_style_radius(panel, 8, 0);
-    lv_obj_set_style_pad_all(panel, 0, 0);
-    lv_obj_clear_flag(panel, LV_OBJ_FLAG_SCROLLABLE);
+// Garage panel
+static lv_obj_t *panel_garage;
+static lv_obj_t *lbl_garage_status;
 
-    // Sensor name
-    lv_obj_t *lbl_name = lv_label_create(panel);
-    lv_label_set_text(lbl_name, name);
-    lv_obj_set_style_text_color(lbl_name, accent, 0);
-    lv_obj_set_style_text_font(lbl_name, &lv_font_montserrat_20, 0);
-    lv_obj_set_pos(lbl_name, 15, 8);
+// Combined chart (outdoor temp + humidity)
+static lv_obj_t *chart;
+static lv_chart_series_t *ser_temp;
+static lv_chart_series_t *ser_hum;
 
-    // Temperature value
-    lbl_temp[idx] = lv_label_create(panel);
-    lv_label_set_text(lbl_temp[idx], "--.- C");
-    lv_obj_set_style_text_color(lbl_temp[idx], lv_color_white(), 0);
-    lv_obj_set_style_text_font(lbl_temp[idx], &lv_font_montserrat_28, 0);
-    lv_obj_set_pos(lbl_temp[idx], 15, 45);
+// Helper: Clock panel (400x170)
+static void create_clock_panel(lv_obj_t *parent) {
+    panel_clock = lv_obj_create(parent);
+    lv_obj_set_pos(panel_clock, 0, 0);
+    lv_obj_set_size(panel_clock, 400, 170);
+    lv_obj_set_style_bg_color(panel_clock, COLOR_PANEL, 0);
+    lv_obj_set_style_border_width(panel_clock, 0, 0);
+    lv_obj_set_style_radius(panel_clock, 8, 0);
+    lv_obj_clear_flag(panel_clock, LV_OBJ_FLAG_SCROLLABLE);
 
-    // Temperature label
-    lv_obj_t *t_label = lv_label_create(panel);
-    lv_label_set_text(t_label, "Temp");
-    lv_obj_set_style_text_color(t_label, COLOR_TEXT_DIM, 0);
-    lv_obj_set_style_text_font(t_label, &lv_font_montserrat_14, 0);
-    lv_obj_set_pos(t_label, 15, 80);
+    // Time (HH:MM) - Big Number font
+    lbl_time = lv_label_create(panel_clock);
+    lv_label_set_text(lbl_time, "12:00");
+    lv_obj_set_style_text_color(lbl_time, COLOR_TEXT_PRIMARY, 0);
+    lv_obj_set_style_text_font(lbl_time, &ui_font_Big_Number, 0);
+    lv_obj_set_pos(lbl_time, 15, 5);
 
-    // Humidity value
-    lbl_hum[idx] = lv_label_create(panel);
-    lv_label_set_text(lbl_hum[idx], "--.- %");
-    lv_obj_set_style_text_color(lbl_hum[idx], lv_color_white(), 0);
-    lv_obj_set_style_text_font(lbl_hum[idx], &lv_font_montserrat_28, 0);
-    lv_obj_set_pos(lbl_hum[idx], 200, 45);
+    // Date
+    lbl_date = lv_label_create(panel_clock);
+    lv_label_set_text(lbl_date, "Saturday, Mar 7");
+    lv_obj_set_style_text_color(lbl_date, COLOR_TEXT_DIM, 0);
+    lv_obj_set_style_text_font(lbl_date, &lv_font_montserrat_14, 0);
+    lv_obj_set_pos(lbl_date, 15, 85);
 
-    // Humidity label
-    lv_obj_t *h_label = lv_label_create(panel);
-    lv_label_set_text(h_label, "Humidity");
-    lv_obj_set_style_text_color(h_label, COLOR_TEXT_DIM, 0);
-    lv_obj_set_style_text_font(h_label, &lv_font_montserrat_14, 0);
-    lv_obj_set_pos(h_label, 200, 80);
+    // Outdoor temp (large)
+    lbl_outdoor_temp = lv_label_create(panel_clock);
+    lv_label_set_text(lbl_outdoor_temp, "-- F");
+    lv_obj_set_style_text_color(lbl_outdoor_temp, COLOR_OUTDOOR_TEMP, 0);
+    lv_obj_set_style_text_font(lbl_outdoor_temp, &lv_font_montserrat_48, 0);
+    lv_obj_set_pos(lbl_outdoor_temp, 210, 15);
+
+    // Weather icon placeholder
+    rect_weather_icon = lv_obj_create(panel_clock);
+    lv_obj_set_pos(rect_weather_icon, 315, 10);
+    lv_obj_set_size(rect_weather_icon, 70, 70);
+    lv_obj_set_style_bg_color(rect_weather_icon, COLOR_ICON_PLACEHOLDER, 0);
+    lv_obj_set_style_border_width(rect_weather_icon, 0, 0);
+    lv_obj_set_style_radius(rect_weather_icon, 35, 0);
+
+    // Enclosure reading
+    lbl_enclosure_temp = lv_label_create(panel_clock);
+    lv_label_set_text(lbl_enclosure_temp, "Enclosure: -- F, --%");
+    lv_obj_set_style_text_color(lbl_enclosure_temp, COLOR_ENCL, 0);
+    lv_obj_set_style_text_font(lbl_enclosure_temp, &lv_font_montserrat_14, 0);
+    lv_obj_set_pos(lbl_enclosure_temp, 210, 95);
 }
 
-// ============================================================
-// Helper: create a chart
-// ============================================================
-static lv_obj_t *create_chart(lv_obj_t *parent, const char *title,
-                               int y_pos, int y_min, int y_max,
-                               lv_chart_series_t **s1, lv_chart_series_t **s2) {
+// Helper: Calendar sidebar (150x90)
+static void create_calendar_sidebar(lv_obj_t *parent) {
+    panel_calendar = lv_obj_create(parent);
+    lv_obj_set_pos(panel_calendar, 0, 170);
+    lv_obj_set_size(panel_calendar, 150, 90);
+    lv_obj_set_style_bg_color(panel_calendar, COLOR_PANEL, 0);
+    lv_obj_set_style_border_width(panel_calendar, 0, 0);
+    lv_obj_set_style_radius(panel_calendar, 8, 0);
+    lv_obj_clear_flag(panel_calendar, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t *title = lv_label_create(panel_calendar);
+    lv_label_set_text(title, "Events");
+    lv_obj_set_style_text_color(title, COLOR_TEXT_DIM, 0);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_12, 0);
+    lv_obj_set_pos(title, 10, 5);
+
+    for (int i = 0; i < 10; i++) {
+        lbl_calendar_items[i] = lv_label_create(panel_calendar);
+        lv_label_set_text_fmt(lbl_calendar_items[i], "List line %d", i + 1);
+        lv_obj_set_style_text_color(lbl_calendar_items[i], COLOR_TEXT_DIM, 0);
+        lv_obj_set_style_text_font(lbl_calendar_items[i], &lv_font_montserrat_10, 0);
+        lv_obj_set_pos(lbl_calendar_items[i], 10, 22 + (i * 7));
+    }
+}
+
+// Helper: Forecast panels (5 x 125px wide)
+static void create_forecast_panels(lv_obj_t *parent) {
+    const char *days[] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"};
+    const lv_color_t colors[] = {
+        lv_color_hex(0xFFD700), lv_color_hex(0xC0C0C0), lv_color_hex(0x87CEEB),
+        lv_color_hex(0xB0C4DE), lv_color_hex(0xFFA500)
+    };
+
+    for (int i = 0; i < 5; i++) {
+        panel_forecast[i] = lv_obj_create(parent);
+        lv_obj_set_pos(panel_forecast[i], 155 + (i * 130), 170);
+        lv_obj_set_size(panel_forecast[i], 125, 85);
+        lv_obj_set_style_bg_color(panel_forecast[i], COLOR_PANEL, 0);
+        lv_obj_set_style_border_width(panel_forecast[i], 0, 0);
+        lv_obj_set_style_radius(panel_forecast[i], 8, 0);
+        lv_obj_clear_flag(panel_forecast[i], LV_OBJ_FLAG_SCROLLABLE);
+
+        // Icon
+        rect_forecast_icon[i] = lv_obj_create(panel_forecast[i]);
+        lv_obj_set_pos(rect_forecast_icon[i], 35, 5);
+        lv_obj_set_size(rect_forecast_icon[i], 50, 50);
+        lv_obj_set_style_bg_color(rect_forecast_icon[i], colors[i], 0);
+        lv_obj_set_style_border_width(rect_forecast_icon[i], 0, 0);
+        lv_obj_set_style_radius(rect_forecast_icon[i], 25, 0);
+
+        // Day
+        lbl_forecast_day[i] = lv_label_create(panel_forecast[i]);
+        lv_label_set_text(lbl_forecast_day[i], days[i]);
+        lv_obj_set_style_text_color(lbl_forecast_day[i], COLOR_TEXT_PRIMARY, 0);
+        lv_obj_set_style_text_font(lbl_forecast_day[i], &lv_font_montserrat_10, 0);
+        lv_obj_align(lbl_forecast_day[i], LV_ALIGN_BOTTOM_MID, 0, -15);
+
+        // Temp
+        lbl_forecast_temp[i] = lv_label_create(panel_forecast[i]);
+        lv_label_set_text(lbl_forecast_temp[i], "H:82 L:63");
+        lv_obj_set_style_text_color(lbl_forecast_temp[i], COLOR_TEXT_DIM, 0);
+        lv_obj_set_style_text_font(lbl_forecast_temp[i], &lv_font_montserrat_10, 0);
+        lv_obj_align(lbl_forecast_temp[i], LV_ALIGN_BOTTOM_MID, 0, -3);
+    }
+}
+
+// Helper: Combined chart (795x110, dual-axis)
+static void create_combined_chart(lv_obj_t *parent) {
     // Title
-    lv_obj_t *lbl = lv_label_create(parent);
-    lv_label_set_text(lbl, title);
-    lv_obj_set_pos(lbl, 10, y_pos - 17);
-    lv_obj_set_style_text_color(lbl, COLOR_TEXT_LABEL, 0);
-    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_14, 0);
+    lv_obj_t *title = lv_label_create(parent);
+    lv_label_set_text(title, "Outdoor: Temperature & Humidity (6 hours)");
+    lv_obj_set_style_text_color(title, COLOR_TEXT_DIM, 0);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_12, 0);
+    lv_obj_set_pos(title, 10, 265);
 
     // Chart
-    lv_obj_t *chart = lv_chart_create(parent);
-    lv_obj_set_pos(chart, 5, y_pos);
-    lv_obj_set_size(chart, 790, 140);
+    chart = lv_chart_create(parent);
+    lv_obj_set_pos(chart, 5, 280);
+    lv_obj_set_size(chart, 790, 85);
     lv_chart_set_type(chart, LV_CHART_TYPE_LINE);
     lv_chart_set_point_count(chart, CHART_POINTS);
-    lv_chart_set_range(chart, LV_CHART_AXIS_PRIMARY_Y, y_min, y_max);
-    lv_chart_set_div_line_count(chart, 5, 0);
+    lv_chart_set_div_line_count(chart, 4, 0);
 
-    // Style
     lv_obj_set_style_bg_color(chart, COLOR_PANEL, 0);
     lv_obj_set_style_border_width(chart, 0, 0);
     lv_obj_set_style_radius(chart, 8, 0);
     lv_obj_set_style_line_width(chart, 2, LV_PART_ITEMS);
-    lv_obj_set_style_size(chart, 0, LV_PART_INDICATOR);  // hide point dots
+    lv_obj_set_style_size(chart, 0, LV_PART_INDICATOR);
 
-    // Series
-    *s1 = lv_chart_add_series(chart, COLOR_S1_LINE, LV_CHART_AXIS_PRIMARY_Y);
-    *s2 = lv_chart_add_series(chart, COLOR_S2_LINE, LV_CHART_AXIS_PRIMARY_Y);
+    // Dual Y-axis: Temp (0-120°F), Humidity (0-100%)
+    // Use secondary axis for humidity
+    lv_chart_set_range(chart, LV_CHART_AXIS_PRIMARY_Y, 0, 1200);   // Temp x10 (0-120°F)
+    lv_chart_set_range(chart, LV_CHART_AXIS_SECONDARY_Y, 0, 1000); // Humidity x10 (0-100%)
 
-    // Initialize with no-data markers
-    for (int s = 0; s < CHART_POINTS; s++) {
-        lv_chart_set_next_value(chart, *s1, LV_CHART_POINT_NONE);
-        lv_chart_set_next_value(chart, *s2, LV_CHART_POINT_NONE);
+    // Series: temp on primary axis, humidity on secondary
+    ser_temp = lv_chart_add_series(chart, COLOR_OUTDOOR_TEMP, LV_CHART_AXIS_PRIMARY_Y);
+    ser_hum = lv_chart_add_series(chart, COLOR_OUTDOOR_HUM, LV_CHART_AXIS_SECONDARY_Y);
+
+    // Initialize with no data
+    for (int i = 0; i < CHART_POINTS; i++) {
+        lv_chart_set_next_value(chart, ser_temp, LV_CHART_POINT_NONE);
+        lv_chart_set_next_value(chart, ser_hum, LV_CHART_POINT_NONE);
     }
-
-    return chart;
 }
 
-// ============================================================
-// UI init
-// ============================================================
+// Helper: Garage panel (800x60)
+static void create_garage_panel(lv_obj_t *parent) {
+    panel_garage = lv_obj_create(parent);
+    lv_obj_set_pos(panel_garage, 0, 370);
+    lv_obj_set_size(panel_garage, 800, 60);
+    lv_obj_set_style_bg_color(panel_garage, COLOR_GARAGE_BG, 0);
+    lv_obj_set_style_border_width(panel_garage, 0, 0);
+    lv_obj_set_style_radius(panel_garage, 8, 0);
+    lv_obj_clear_flag(panel_garage, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t *label = lv_label_create(panel_garage);
+    lv_label_set_text(label, "Garage Door:");
+    lv_obj_set_style_text_color(label, COLOR_TEXT_PRIMARY, 0);
+    lv_obj_set_style_text_font(label, &lv_font_montserrat_20, 0);
+    lv_obj_set_pos(label, 260, 18);
+
+    lbl_garage_status = lv_label_create(panel_garage);
+    lv_label_set_text(lbl_garage_status, "  Unknown  ");
+    lv_obj_set_style_text_color(lbl_garage_status, lv_color_black(), 0);
+    lv_obj_set_style_text_font(lbl_garage_status, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_bg_color(lbl_garage_status, COLOR_TEXT_DIM, 0);
+    lv_obj_set_style_bg_opa(lbl_garage_status, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(lbl_garage_status, 15, 0);
+    lv_obj_set_style_pad_all(lbl_garage_status, 8, 0);
+    lv_obj_set_pos(lbl_garage_status, 410, 15);
+}
+
+// Main init function
 void ui_init(void) {
     screen = lv_obj_create(NULL);
     lv_obj_set_style_bg_color(screen, COLOR_BG, 0);
     lv_obj_clear_flag(screen, LV_OBJ_FLAG_SCROLLABLE);
 
-    // Status bar
-    lbl_status = lv_label_create(screen);
-    lv_obj_set_pos(lbl_status, 10, 5);
-    lv_label_set_text(lbl_status, "Connecting...");
-    lv_obj_set_style_text_color(lbl_status, COLOR_TEXT_DIM, 0);
-    lv_obj_set_style_text_font(lbl_status, &lv_font_montserrat_14, 0);
-
-    // Sensor panels
-    create_sensor_panel(screen, 0, "Outdoor",   COLOR_S1_LINE, 4);
-    create_sensor_panel(screen, 1, "Enclosure", COLOR_S2_LINE, 404);
-
-    // Temperature chart (y range: -10 to 50 C, scaled x10 = -100 to 500)
-    chart_temp = create_chart(screen, "Temperature (C)", 167, -100, 500,
-                              &ser_temp[0], &ser_temp[1]);
-
-    // Humidity chart (y range: 0 to 100%, scaled x10 = 0 to 1000)
-    chart_hum = create_chart(screen, "Humidity (%)", 327, 0, 1000,
-                             &ser_hum[0], &ser_hum[1]);
+    create_clock_panel(screen);
+    create_calendar_sidebar(screen);
+    create_forecast_panels(screen);
+    create_combined_chart(screen);
+    create_garage_panel(screen);
 
     lv_disp_load_scr(screen);
 }
 
-// ============================================================
-// Update current readings display
-// ============================================================
-void ui_update_current(int sensorIdx, float temp, float humidity) {
-    if (sensorIdx < 0 || sensorIdx > 1) return;
+// API implementation
+void ui_update_time(const char* time_str, const char* date_str) {
+    lv_label_set_text(lbl_time, time_str);
+    lv_label_set_text(lbl_date, date_str);
+}
 
+void ui_update_outdoor_temp(float temp_f) {
     char buf[16];
-    snprintf(buf, sizeof(buf), "%.1f C", temp);
-    lv_label_set_text(lbl_temp[sensorIdx], buf);
-
-    snprintf(buf, sizeof(buf), "%.1f %%", humidity);
-    lv_label_set_text(lbl_hum[sensorIdx], buf);
+    snprintf(buf, sizeof(buf), "%.0f F", temp_f);
+    lv_label_set_text(lbl_outdoor_temp, buf);
 }
 
-// ============================================================
-// Add data point to charts
-// ============================================================
-void ui_chart_add_point(int sensorIdx, float temp, float humidity) {
-    if (sensorIdx < 0 || sensorIdx > 1) return;
-
-    // Scale x10 for one-decimal precision
-    lv_chart_set_next_value(chart_temp, ser_temp[sensorIdx], (lv_coord_t)(temp * 10));
-    lv_chart_set_next_value(chart_hum,  ser_hum[sensorIdx],  (lv_coord_t)(humidity * 10));
-
-    lv_chart_refresh(chart_temp);
-    lv_chart_refresh(chart_hum);
+void ui_update_enclosure(float temp_f, float humidity) {
+    char buf[40];
+    snprintf(buf, sizeof(buf), "Enclosure: %.0f F, %.0f%%", temp_f, humidity);
+    lv_label_set_text(lbl_enclosure_temp, buf);
 }
 
-// ============================================================
-// Update status bar text
-// ============================================================
-void ui_set_status(const char* text) {
-    lv_label_set_text(lbl_status, text);
+void ui_chart_add_point(float temp_f, float humidity) {
+    lv_chart_set_next_value(chart, ser_temp, (lv_coord_t)(temp_f * 10));
+    lv_chart_set_next_value(chart, ser_hum, (lv_coord_t)(humidity * 10));
+    lv_chart_refresh(chart);
+}
+
+void ui_update_garage_status(const char* status) {
+    if (strcmp(status, "open") == 0) {
+        lv_label_set_text(lbl_garage_status, "   Open   ");
+        lv_obj_set_style_bg_color(lbl_garage_status, COLOR_STATUS_OPEN, 0);
+    } else if (strcmp(status, "closed") == 0) {
+        lv_label_set_text(lbl_garage_status, "  Closed  ");
+        lv_obj_set_style_bg_color(lbl_garage_status, COLOR_STATUS_CLOSED, 0);
+    } else {
+        lv_label_set_text(lbl_garage_status, " Unknown ");
+        lv_obj_set_style_bg_color(lbl_garage_status, COLOR_TEXT_DIM, 0);
+    }
+}
+
+// Legacy compatibility
+void ui_update_current(int sensorIdx, float temp, float humidity) {
+    // Keep empty for backward compatibility with MQTT callback
 }

@@ -82,7 +82,7 @@ void publishJSON(const char* topic, float temp, float humidity) {
 
 // --- Read sensors and publish ---
 void readAndPublish() {
-    // Read outdoor sensors
+    // Read outdoor sensors (DHT returns Celsius)
     float t1 = dhtOutdoor1.getTemperature();
     float h1 = dhtOutdoor1.getHumidity();
     bool ok1 = !isnan(t1) && !isnan(h1);
@@ -92,23 +92,30 @@ void readAndPublish() {
     bool ok2 = !isnan(t2) && !isnan(h2);
 
     // Average outdoor readings (fallback to single sensor if one fails)
+    // Convert Celsius to Fahrenheit before publishing
     if (ok1 && ok2) {
-        publishJSON(TOPIC_OUTDOOR, (t1 + t2) / 2.0f, (h1 + h2) / 2.0f);
+        float tempC = (t1 + t2) / 2.0f;
+        float tempF = tempC * 9.0f / 5.0f + 32.0f;
+        float humAvg = (h1 + h2) / 2.0f;
+        publishJSON(TOPIC_OUTDOOR, tempF, humAvg);
     } else if (ok1) {
         Serial.println("Outdoor sensor 2 failed, using sensor 1 only");
-        publishJSON(TOPIC_OUTDOOR, t1, h1);
+        float tempF = t1 * 9.0f / 5.0f + 32.0f;
+        publishJSON(TOPIC_OUTDOOR, tempF, h1);
     } else if (ok2) {
         Serial.println("Outdoor sensor 1 failed, using sensor 2 only");
-        publishJSON(TOPIC_OUTDOOR, t2, h2);
+        float tempF = t2 * 9.0f / 5.0f + 32.0f;
+        publishJSON(TOPIC_OUTDOOR, tempF, h2);
     } else {
         Serial.println("Both outdoor sensors failed, skipping outdoor publish");
     }
 
-    // Read enclosure sensor
+    // Read enclosure sensor (convert to Fahrenheit)
     float tE = dhtEnclosure.getTemperature();
     float hE = dhtEnclosure.getHumidity();
     if (!isnan(tE) && !isnan(hE)) {
-        publishJSON(TOPIC_ENCLOSURE, tE, hE);
+        float tempF = tE * 9.0f / 5.0f + 32.0f;
+        publishJSON(TOPIC_ENCLOSURE, tempF, hE);
     } else {
         Serial.println("Enclosure sensor failed, skipping publish");
     }

@@ -12,12 +12,13 @@ Hardware spec: `doc/panel_spec.md`
 
 Two PlatformIO projects communicate via MQTT (HiveMQ Cloud, TLS on port 8883):
 
-1. **Sensor Node** (`sensor_node/`) — ESP12 (ESP8266) with 3x DHT22 sensors. Two outdoor sensors are averaged into one reading; one enclosure sensor reports separately. Publishes every 5 minutes.
-2. **Display Node** (`display_node/`) — CrowPanel ESP32-S3 with 7" LVGL display. Subscribes to MQTT, shows current outdoor/enclosure readings and 6-hour historical line charts.
+1. **Sensor Node** (`sensor_node/`) — ESP12 (ESP8266) with 3x DHT22 sensors. Two outdoor sensors are averaged into one reading; one enclosure sensor reports separately. Publishes every 5 minutes. **Temperatures are published in Fahrenheit.**
+2. **Display Node** (`display_node/`) — CrowPanel ESP32-S3 with 7" LVGL display. Subscribes to MQTT, displays comprehensive dashboard with time, weather, sensor data, garage status, and historical charts.
 
 **MQTT Topics:**
-- `crowpanel/outdoor` — averaged outdoor temp/humidity `{"t":22.3,"h":48.7}`
-- `crowpanel/enclosure` — enclosure temp/humidity `{"t":25.1,"h":35.4}`
+- `crowpanel/outdoor` — averaged outdoor temp/humidity in Fahrenheit `{"t":72.5,"h":48.7}`
+- `crowpanel/enclosure` — enclosure temp/humidity in Fahrenheit `{"t":78.1,"h":35.4}`
+- `crowpanel/garage` — garage door status `{"status":"open"}` or `{"status":"closed"}`
 
 ## Build Commands
 
@@ -46,7 +47,8 @@ Both projects require `include/credentials.h` (gitignored). Copy from `include/c
 - **Platform:** ESP8266 (`esp12e` board)
 - **DHT22 pins:** Outdoor #1 GPIO 4 (D2), Outdoor #2 GPIO 5 (D1), Enclosure GPIO 14 (D5)
 - **Libraries:** PubSubClient (MQTT), DHTesp (sensor reading)
-- **Key file:** `src/main.cpp` — WiFi/MQTT connection, sensor reading with outdoor averaging and fallback, 5-min publish loop
+- **Key file:** `src/main.cpp` — WiFi/MQTT connection, sensor reading with outdoor averaging and fallback, Celsius to Fahrenheit conversion, 5-min publish loop
+- **Temperature units:** All readings converted to Fahrenheit before MQTT publish (formula: `F = C * 9/5 + 32`)
 
 ## Display Node (`display_node/`)
 
@@ -54,11 +56,34 @@ Both projects require `include/credentials.h` (gitignored). Copy from `include/c
 - **Stack:** Arduino → LVGL 8.3.6 (UI) → LovyanGFX 1.1.12 (display driver) → ESP32-S3 hardware
 - **Libraries:** LVGL, LovyanGFX, TAMC_GT911, PubSubClient, ArduinoJson
 - **Key files:**
-  - `src/main.cpp` — LovyanGFX display driver (16-bit RGB parallel bus), LVGL init, touch input, WiFi/MQTT connection with `mqttCallback`
-  - `src/ui.cpp` — Hand-written LVGL UI: status bar, two sensor panels (Outdoor/Enclosure), temperature chart, humidity chart. Charts use `lv_chart` with 72-point sliding window (6h at 5-min intervals), values scaled x10
+  - `src/main.cpp` — LovyanGFX display driver (16-bit RGB parallel bus), LVGL init, touch input, WiFi/MQTT connection with `mqttCallback`, NTP time sync (EST UTC-5), time display updates
+  - `src/ui.cpp` — Hand-written LVGL UI with dashboard layout (clock, sensors, charts, garage, forecast/calendar placeholders). Charts use `lv_chart` with 72-point sliding window (6h at 5-min intervals), values scaled x10
+  - `src/fonts/` — Custom fonts: `ui_font_Big_Number` (72px Montserrat Light for clock), `ui_font_Bold_Font` (16px Montserrat Bold for labels)
+  - `include/ui.h` — UI API: `ui_update_time()`, `ui_update_outdoor_temp()`, `ui_update_enclosure()`, `ui_chart_add_point()`, `ui_update_garage_status()`
   - `include/touch.h` — GT911 capacitive touch driver (I2C SDA=19, SCL=20), copied from example
 
-**Display layout (800x480):** Status bar (30px) → Outdoor + Enclosure panels (120px) → Temperature chart (155px) → Humidity chart (155px). Dark theme, red=outdoor, teal=enclosure.
+**Dashboard Layout (800x480):**
+```
++----------------------------------------------------------+
+| Clock Panel (400x170)       | Calendar  | 5 Forecast    |
+| - Time (72px Big Number)    | Sidebar   | Panels        |
+| - Date                      | (150x90)  | (125x85 each) |
+| - Outdoor temp (48px)       |           |               |
+| - Weather icon (placeholder)|           |               |
+| - Enclosure label           |           |               |
++----------------------------------------------------------+
+| Combined Chart (795x110) - Outdoor temp + humidity       |
+| Dual-axis: 0-120°F (temp), 0-100% (humidity)            |
++----------------------------------------------------------+
+| Garage Panel (800x60) - Status badge with color coding  |
++----------------------------------------------------------+
+```
+
+**Color scheme:** Deep blue background (#1A1A50), dark panels (#16213E), red=outdoor temp, teal=humidity/enclosure, green=closed, red=open, gold=placeholders
+
+**NTP Time:** Syncs on startup with `pool.ntp.org`, updates display every second. Timezone configured in `main.cpp` (default: EST UTC-5 with DST)
+
+**Phase 2 Features (placeholders ready):** Weather forecast API integration, calendar API integration, touch controls for interactivity
 
 ## Example Project (`examples/CrowPanel_ESP32_7.0/`)
 

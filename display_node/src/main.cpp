@@ -7,6 +7,7 @@
 #include <WiFiClientSecure.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
+#include <time.h>
 #include "credentials.h"
 #include "ui.h"
 
@@ -124,40 +125,58 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
 WiFiClientSecure wifiClientSecure;
 PubSubClient mqttClient(wifiClientSecure);
 
+// ============================================================
+// NTP Time Configuration
+// ============================================================
+const char* NTP_SERVER = "pool.ntp.org";
+const long GMT_OFFSET_SEC = -5 * 3600;      // EST (UTC-5)
+const int DAYLIGHT_OFFSET_SEC = 3600;       // DST adjustment
+static bool timeInitialized = false;
+
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
     char json[length + 1];
     memcpy(json, payload, length);
     json[length] = '\0';
 
-    StaticJsonDocument<64> doc;
-    DeserializationError err = deserializeJson(doc, json);
-    if (err) {
-        Serial.print("JSON parse error: ");
-        Serial.println(err.c_str());
+    Serial.print("MQTT: ");
+    Serial.print(topic);
+    Serial.print(" -> ");
+    Serial.println(json);
+
+    // Handle garage door status
+    if (strstr(topic, "garage")) {
+        StaticJsonDocument<128> doc;
+        if (deserializeJson(doc, json) == DeserializationError::Ok) {
+            const char* status = doc["status"];  // "open" or "closed"
+            if (status) {
+                ui_update_garage_status(status);
+            }
+        }
         return;
     }
 
-    float temp = doc["t"];
+    // Handle sensor readings (now in Fahrenheit from sensor)
+    StaticJsonDocument<64> doc;
+    if (deserializeJson(doc, json) != DeserializationError::Ok) {
+        Serial.println("JSON parse error");
+        return;
+    }
+
+    float temp = doc["t"];  // Now in Fahrenheit from sensor
     float hum  = doc["h"];
 
-    // Determine sensor index from topic
     int sensorIdx = -1;
     if (strstr(topic, "outdoor")) {
         sensorIdx = 0;
+        ui_update_outdoor_temp(temp);  // Large display
+        ui_chart_add_point(temp, hum); // Chart (outdoor only)
     } else if (strstr(topic, "enclosure")) {
         sensorIdx = 1;
+        ui_update_enclosure(temp, hum);  // Small label only
     }
 
     if (sensorIdx >= 0) {
-        ui_update_current(sensorIdx, temp, hum);
-        ui_chart_add_point(sensorIdx, temp, hum);
-
-        Serial.print("Received ");
-        Serial.print(topic);
-        Serial.print(": t=");
-        Serial.print(temp);
-        Serial.print(" h=");
-        Serial.println(hum);
+        ui_update_current(sensorIdx, temp, hum);  // Keep for compatibility
     }
 }
 
@@ -180,19 +199,40 @@ void connectWiFi() {
     }
 }
 
+void initNTP() {
+    Serial.print("Syncing time with NTP...");
+    configTime(GMT_OFFSET_SEC, DAYLIGHT_OFFSET_SEC, NTP_SERVER);
+
+    struct tm timeinfo;
+    int attempts = 0;
+    while (!getLocalTime(&timeinfo) && attempts < 20) {
+        delay(500);
+        Serial.print(".");
+        attempts++;
+    }
+
+    if (attempts < 20) {
+        Serial.println(" synchronized");
+        Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+        timeInitialized = true;
+    } else {
+        Serial.println(" FAILED");
+    }
+}
+
 void connectMQTT() {
     int attempts = 0;
     while (!mqttClient.connected() && attempts < 5) {
         Serial.print("Connecting to MQTT...");
         if (mqttClient.connect("crowpanel-display", MQTT_USER, MQTT_PASSWORD)) {
             Serial.println("connected");
-            mqttClient.subscribe("crowpanel/+");
-            ui_set_status("Connected");
+            mqttClient.subscribe("crowpanel/outdoor");
+            mqttClient.subscribe("crowpanel/enclosure");
+            mqttClient.subscribe("crowpanel/garage");
         } else {
             attempts++;
             Serial.print("failed, rc=");
             Serial.println(mqttClient.state());
-            ui_set_status("MQTT reconnecting...");
             delay(3000);
         }
     }
@@ -246,6 +286,7 @@ void setup() {
 
     // WiFi + MQTT
     connectWiFi();
+    initNTP();  // Initialize NTP after WiFi connects
     wifiClientSecure.setInsecure();
     mqttClient.setServer(MQTT_HOST, MQTT_PORT);
     mqttClient.setCallback(mqttCallback);
@@ -261,9 +302,23 @@ void loop() {
     lv_tick_inc(now - lv_tick_prev);
     lv_tick_prev = now;
 
+    // Update time display every second
+    static unsigned long lastTimeUpdate = 0;
+    if (timeInitialized && millis() - lastTimeUpdate >= 1000) {
+        lastTimeUpdate = millis();
+
+        struct tm timeinfo;
+        if (getLocalTime(&timeinfo)) {
+            char timeStr[16];
+            char dateStr[32];
+            strftime(timeStr, sizeof(timeStr), "%H:%M", &timeinfo);
+            strftime(dateStr, sizeof(dateStr), "%A, %b %d", &timeinfo);
+            ui_update_time(timeStr, dateStr);
+        }
+    }
+
     // Reconnect if needed
     if (WiFi.status() != WL_CONNECTED) {
-        ui_set_status("WiFi reconnecting...");
         connectWiFi();
     }
     if (!mqttClient.connected()) {
