@@ -129,7 +129,7 @@ PubSubClient mqttClient(wifiClientSecure);
 // NTP Time Configuration
 // ============================================================
 const char* NTP_SERVER = "pool.ntp.org";
-const long GMT_OFFSET_SEC = -5 * 3600;      // EST (UTC-5)
+const long GMT_OFFSET_SEC = -6 * 3600;      // CST (UTC-6)
 const int DAYLIGHT_OFFSET_SEC = 3600;       // DST adjustment
 static bool timeInitialized = false;
 
