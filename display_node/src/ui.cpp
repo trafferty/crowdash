@@ -193,11 +193,16 @@ static void create_combined_chart(lv_obj_t *parent) {
     lv_obj_set_style_line_width(chart, 2, LV_PART_ITEMS);
     lv_obj_set_style_size(chart, 0, LV_PART_INDICATOR);
 
-    // Dual Y-axis: Temp (0-120°F), Humidity (0-100%)
-    lv_chart_set_range(chart, LV_CHART_AXIS_PRIMARY_Y, 0, 1200);   // Temp x10 (0-120°F)
-    lv_chart_set_range(chart, LV_CHART_AXIS_SECONDARY_Y, 0, 1000); // Humidity x10 (0-100%)
+    // Dual Y-axis: Temp left (dynamic range), Humidity right (0-100%)
+    lv_chart_set_range(chart, LV_CHART_AXIS_PRIMARY_Y, 50, 100);  // Initial temp range (°F, updated dynamically)
+    lv_chart_set_range(chart, LV_CHART_AXIS_SECONDARY_Y, 0, 100); // Humidity 0-100%
 
-    // Series: temp on primary axis, humidity on secondary
+    // Y-axis tick marks and labels
+    // Args: obj, axis, major_len, minor_len, major_cnt, minor_cnt, label_en, draw_size
+    lv_chart_set_axis_tick(chart, LV_CHART_AXIS_PRIMARY_Y,   5, 3, 5, 2, true, 30); // Left: temp
+    lv_chart_set_axis_tick(chart, LV_CHART_AXIS_SECONDARY_Y, 5, 3, 5, 2, true, 30); // Right: humidity
+
+    // Series: temp on primary (left) axis, humidity on secondary (right) axis
     ser_temp = lv_chart_add_series(chart, COLOR_OUTDOOR_TEMP, LV_CHART_AXIS_PRIMARY_Y);
     ser_hum = lv_chart_add_series(chart, COLOR_OUTDOOR_HUM, LV_CHART_AXIS_SECONDARY_Y);
 
@@ -250,6 +255,10 @@ void ui_init(void) {
     lv_disp_load_scr(screen);
 }
 
+// Temperature range tracking for dynamic left Y-axis
+static float temp_min_seen = 999.0f;
+static float temp_max_seen = -999.0f;
+
 // API implementation
 void ui_update_time(const char* time_str, const char* date_str) {
     lv_label_set_text(lbl_time, time_str);
@@ -269,8 +278,16 @@ void ui_update_enclosure(float temp_f, float humidity) {
 }
 
 void ui_chart_add_point(float temp_f, float humidity) {
-    lv_chart_set_next_value(chart, ser_temp, (lv_coord_t)(temp_f * 10));
-    lv_chart_set_next_value(chart, ser_hum, (lv_coord_t)(humidity * 10));
+    // Update dynamic temperature range and adjust left Y-axis
+    if (temp_f < temp_min_seen) temp_min_seen = temp_f;
+    if (temp_f > temp_max_seen) temp_max_seen = temp_f;
+    lv_chart_set_range(chart, LV_CHART_AXIS_PRIMARY_Y,
+                       (lv_coord_t)(temp_min_seen - 5),
+                       (lv_coord_t)(temp_max_seen + 5));
+
+    // Store actual values (no x10 scaling — axis labels show real °F / %)
+    lv_chart_set_next_value(chart, ser_temp, (lv_coord_t)temp_f);
+    lv_chart_set_next_value(chart, ser_hum, (lv_coord_t)humidity);
     lv_chart_refresh(chart);
 }
 
