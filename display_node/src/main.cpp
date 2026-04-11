@@ -9,7 +9,7 @@
 #include <ArduinoJson.h>
 #include <time.h>
 #include "credentials.h"
-#include "ui.h"
+#include "app_ui.h"
 
 // ============================================================
 // LovyanGFX display driver (from CrowPanel example)
@@ -282,6 +282,7 @@ void setup() {
 
     // Build UI
     ui_init();
+    ui_app_init();
     lv_timer_handler();
 
     // WiFi + MQTT
