@@ -23,6 +23,9 @@ void ui_update_enclosure(float temp_f, float humidity);
 // Garage door (MQTT: crowpanel/garage)
 void ui_update_garage_status(const char* status);  // "open" or "closed"
 
+// Sensor timestamp (MQTT: crowpanel/outdoor "ts" field, ISO 8601)
+void ui_update_sensor_timestamp(const char* ts);
+
 // Legacy stub kept for backward compatibility with mqttCallback
 void ui_update_current(int sensorIdx, float temp, float humidity);
 

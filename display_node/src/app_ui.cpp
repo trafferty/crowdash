@@ -110,17 +110,45 @@ void ui_update_garage_status(const char* status)
         lv_obj_set_style_text_color(ui_lblGarageDoorStatus,
                                     lv_color_hex(0xFF6B6B),
                                     LV_PART_MAIN | LV_STATE_DEFAULT);
+        if (ui_pnlGarageDoorStatus)
+            lv_obj_set_style_bg_color(ui_pnlGarageDoorStatus,
+                                      lv_color_hex(0x8B0000),
+                                      LV_PART_MAIN | LV_STATE_DEFAULT);
     } else if (strcmp(status, "closed") == 0) {
         lv_label_set_text(ui_lblGarageDoorStatus, "Closed");
         lv_obj_set_style_text_color(ui_lblGarageDoorStatus,
                                     lv_color_hex(0x6FCF97),
                                     LV_PART_MAIN | LV_STATE_DEFAULT);
+        if (ui_pnlGarageDoorStatus)
+            lv_obj_set_style_bg_color(ui_pnlGarageDoorStatus,
+                                      lv_color_hex(0x1A5C2A),
+                                      LV_PART_MAIN | LV_STATE_DEFAULT);
     } else {
         lv_label_set_text(ui_lblGarageDoorStatus, "Unknown");
         lv_obj_set_style_text_color(ui_lblGarageDoorStatus,
                                     lv_color_hex(0x888888),
                                     LV_PART_MAIN | LV_STATE_DEFAULT);
+        if (ui_pnlGarageDoorStatus)
+            lv_obj_set_style_bg_color(ui_pnlGarageDoorStatus,
+                                      lv_color_hex(0x1D254A),
+                                      LV_PART_MAIN | LV_STATE_DEFAULT);
     }
+}
+
+// ============================================================
+// Sensor timestamp
+// ============================================================
+void ui_update_sensor_timestamp(const char* ts)
+{
+    // ts format: "2025-11-15T17:18:25" — extract HH:MM after the 'T'
+    const char* t_pos = strchr(ts, 'T');
+    if (!t_pos) return;
+    char hhmm[6];
+    strncpy(hhmm, t_pos + 1, 5);
+    hhmm[5] = '\0';
+
+    if (ui_lblEvent1)       lv_label_set_text(ui_lblEvent1,       "Last Update");
+    if (ui_lblEventStatus1) lv_label_set_text(ui_lblEventStatus1, hhmm);
 }
 
 // ============================================================

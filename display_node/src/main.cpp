@@ -156,7 +156,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     }
 
     // Handle sensor readings (now in Fahrenheit from sensor)
-    StaticJsonDocument<64> doc;
+    StaticJsonDocument<128> doc;
     if (deserializeJson(doc, json) != DeserializationError::Ok) {
         Serial.println("JSON parse error");
         return;
@@ -164,12 +164,14 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
     float temp = doc["t"];  // Now in Fahrenheit from sensor
     float hum  = doc["h"];
+    const char* ts = doc["ts"] | "";
 
     int sensorIdx = -1;
     if (strstr(topic, "outdoor")) {
         sensorIdx = 0;
         ui_update_outdoor_temp(temp);  // Large display
         ui_chart_add_point(temp, hum); // Chart (outdoor only)
+        if (*ts) ui_update_sensor_timestamp(ts);
     } else if (strstr(topic, "enclosure")) {
         sensorIdx = 1;
         ui_update_enclosure(temp, hum);  // Small label only
