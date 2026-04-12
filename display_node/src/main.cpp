@@ -203,7 +203,7 @@ void connectWiFi() {
 
 void initNTP() {
     Serial.print("Syncing time with NTP...");
-    configTime(NTP_TZ, NTP_SERVER);
+    configTzTime(NTP_TZ, NTP_SERVER);
 
     struct tm timeinfo;
     int attempts = 0;
