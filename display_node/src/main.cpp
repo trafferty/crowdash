@@ -146,10 +146,20 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     // Handle garage door status
     if (strstr(topic, "garage")) {
         StaticJsonDocument<128> doc;
-        if (deserializeJson(doc, json) == DeserializationError::Ok) {
-            const char* status = doc["status"];  // "open" or "closed"
+        DeserializationError err = deserializeJson(doc, json);
+        if (err != DeserializationError::Ok) {
+            Serial.print("Garage JSON parse error: ");
+            Serial.println(err.c_str());
+        } else {
+            const char* status = doc["event"];
+            const char* ts     = doc["ts"] | "";
             if (status) {
+                Serial.print("Garage status: ");
+                Serial.println(status);
                 ui_update_garage_status(status);
+                if (*ts) ui_update_garage_time(ts);
+            } else {
+                Serial.println("Garage JSON missing 'event' field");
             }
         }
         return;

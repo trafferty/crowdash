@@ -18,6 +18,8 @@ static lv_chart_series_t *ser_hum  = NULL;
 static float             temp_min_seen =  999.0f;
 static float             temp_max_seen = -999.0f;
 
+static lv_obj_t *ui_lblGarageTime = NULL;
+
 void ui_app_init(void)
 {
     // Initialize data arrays to "no data"
@@ -36,6 +38,21 @@ void ui_app_init(void)
 
     lv_chart_refresh(ui_chtTemp);
     lv_chart_refresh(ui_chtHumidity);
+
+    // Expand garage panel and add timestamp label at bottom
+    if (ui_pnlGarageDoorStatus) {
+        lv_obj_set_height(ui_pnlGarageDoorStatus, 100);
+        ui_lblGarageTime = lv_label_create(ui_pnlGarageDoorStatus);
+        lv_obj_set_width(ui_lblGarageTime, LV_SIZE_CONTENT);
+        lv_obj_set_height(ui_lblGarageTime, LV_SIZE_CONTENT);
+        lv_obj_set_align(ui_lblGarageTime, LV_ALIGN_CENTER);
+        lv_obj_set_y(ui_lblGarageTime, 40);
+        lv_label_set_text(ui_lblGarageTime, "--:--");
+        lv_obj_set_style_text_font(ui_lblGarageTime, &lv_font_montserrat_14,
+                                   LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_text_color(ui_lblGarageTime, lv_color_hex(0xAAAAAA),
+                                    LV_PART_MAIN | LV_STATE_DEFAULT);
+    }
 }
 
 // ============================================================
@@ -133,6 +150,21 @@ void ui_update_garage_status(const char* status)
                                       lv_color_hex(0x1D254A),
                                       LV_PART_MAIN | LV_STATE_DEFAULT);
     }
+}
+
+// ============================================================
+// Garage timestamp
+// ============================================================
+void ui_update_garage_time(const char* ts)
+{
+    if (!ui_lblGarageTime) return;
+    // ts format: "2026-04-12T14:39:15" — show "HH:MM" after the 'T'
+    const char* t_pos = strchr(ts, 'T');
+    if (!t_pos) return;
+    char hhmm[6];
+    strncpy(hhmm, t_pos + 1, 5);
+    hhmm[5] = '\0';
+    lv_label_set_text(ui_lblGarageTime, hhmm);
 }
 
 // ============================================================
