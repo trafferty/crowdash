@@ -26,9 +26,9 @@ extern "C" {
 #include "ui_events.h"
 
 ///////////////////// SCREENS ////////////////////
-#include "screens/ui_screendashboard.h"
-#include "screens/ui_screentimer.h"
-#include "screens/ui_screenlogger.h"
+#include "ui_screendashboard.h"
+#include "ui_screentimer.h"
+#include "ui_screenlogger.h"
 
 ///////////////////// VARIABLES ////////////////////
 

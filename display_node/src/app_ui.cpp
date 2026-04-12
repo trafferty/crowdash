@@ -57,7 +57,14 @@ static lv_chart_series_t *ser_hum  = NULL;
 static float             temp_min_seen =  999.0f;
 static float             temp_max_seen = -999.0f;
 
-static lv_obj_t *ui_lblGarageTime = NULL;
+// Format 24-hour HH/MM into "H:MMam" / "H:MMpm".  buf must be >= 10 bytes.
+static void fmt_12h(char* buf, size_t len, int hh, int mm)
+{
+    const char* ampm = (hh < 12) ? "am" : "pm";
+    int h12 = hh % 12;
+    if (h12 == 0) h12 = 12;
+    snprintf(buf, len, "%d:%02d%s", h12, mm, ampm);
+}
 
 void ui_app_init(void)
 {
@@ -78,20 +85,7 @@ void ui_app_init(void)
     lv_chart_refresh(ui_chtTemp);
     lv_chart_refresh(ui_chtHumidity);
 
-    // Expand garage panel and add timestamp label at bottom
-    if (ui_pnlGarageDoorStatus) {
-        lv_obj_set_height(ui_pnlGarageDoorStatus, 100);
-        ui_lblGarageTime = lv_label_create(ui_pnlGarageDoorStatus);
-        lv_obj_set_width(ui_lblGarageTime, LV_SIZE_CONTENT);
-        lv_obj_set_height(ui_lblGarageTime, LV_SIZE_CONTENT);
-        lv_obj_set_align(ui_lblGarageTime, LV_ALIGN_CENTER);
-        lv_obj_set_y(ui_lblGarageTime, 40);
-        lv_label_set_text(ui_lblGarageTime, "--:--");
-        lv_obj_set_style_text_font(ui_lblGarageTime, &lv_font_montserrat_14,
-                                   LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_text_color(ui_lblGarageTime, lv_color_hex(0xAAAAAA),
-                                    LV_PART_MAIN | LV_STATE_DEFAULT);
-    }
+
 }
 
 // ============================================================
@@ -197,13 +191,14 @@ void ui_update_garage_status(const char* status)
 void ui_update_garage_time(const char* ts)
 {
     if (!ui_lblGarageTime) return;
-    // ts format: "2026-04-12T14:39:15" — show "HH:MM" after the 'T'
+    // ts format: "2026-04-12T14:39:15"
     const char* t_pos = strchr(ts, 'T');
     if (!t_pos) return;
-    char hhmm[6];
-    strncpy(hhmm, t_pos + 1, 5);
-    hhmm[5] = '\0';
-    lv_label_set_text(ui_lblGarageTime, hhmm);
+    int hh = 0, mm = 0;
+    if (sscanf(t_pos + 1, "%d:%d", &hh, &mm) != 2) return;
+    char buf[10];
+    fmt_12h(buf, sizeof(buf), hh, mm);
+    lv_label_set_text(ui_lblGarageTime, buf);
 }
 
 // ============================================================
@@ -211,15 +206,28 @@ void ui_update_garage_time(const char* ts)
 // ============================================================
 void ui_update_sensor_timestamp(const char* ts)
 {
-    // ts format: "2025-11-15T17:18:25" — extract HH:MM after the 'T'
+    // ts format: "2025-11-15T17:18:25"
     const char* t_pos = strchr(ts, 'T');
     if (!t_pos) return;
-    char hhmm[6];
-    strncpy(hhmm, t_pos + 1, 5);
-    hhmm[5] = '\0';
+
+    int hh = 0, mm = 0;
+    if (sscanf(t_pos + 1, "%d:%d", &hh, &mm) != 2) return;
+
+    char ts_short[10];
+    fmt_12h(ts_short, sizeof(ts_short), hh, mm);
 
     if (ui_lblEvent1)       lv_label_set_text(ui_lblEvent1,       "Last Update");
-    if (ui_lblEventStatus1) lv_label_set_text(ui_lblEventStatus1, hhmm);
+    if (ui_lblEventStatus1) lv_label_set_text(ui_lblEventStatus1, ts_short);
+
+    char buf[28];
+    if (ui_lblTemp) {
+        snprintf(buf, sizeof(buf), "Temp - %s", ts_short);
+        lv_label_set_text(ui_lblTemp, buf);
+    }
+    if (ui_lblHumidity) {
+        snprintf(buf, sizeof(buf), "Humidity - %s", ts_short);
+        lv_label_set_text(ui_lblHumidity, buf);
+    }
 }
 
 // ============================================================

@@ -4,7 +4,7 @@
  * Opts: --bpp 4 --size 85 --font /Users/trafferty/src/SquareLineProjects/crowdash_gui/assets/fonts/Montserrat-Light.ttf -o /Users/trafferty/src/SquareLineProjects/crowdash_gui/assets/fonts/ui_font_Big_Number.c --format lvgl -r 0x2b-0x3a --no-compress --no-prefilter
  ******************************************************************************/
 
-#include "../ui.h"
+#include "ui.h"
 
 #ifndef UI_FONT_BIG_NUMBER
 #define UI_FONT_BIG_NUMBER 1

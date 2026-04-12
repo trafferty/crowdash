@@ -3,7 +3,7 @@
 // LVGL version: 8.3.11
 // Project name: crowdash
 
-#include "../ui.h"
+#include "ui.h"
 
 lv_obj_t *ui_screenlogger = NULL;lv_obj_t *ui_txtLogger = NULL;lv_obj_t *ui_btnGoToTimerScreen2 = NULL;
 // event funtions

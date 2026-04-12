@@ -3,7 +3,7 @@
 // LVGL version: 8.3.11
 // Project name: crowdash
 
-#include "../ui.h"
+#include "ui.h"
 
 lv_obj_t *ui_screentimer = NULL;lv_obj_t *ui_kbNumberPad = NULL;lv_obj_t *ui_btnStartTimer = NULL;lv_obj_t *ui_lblStart = NULL;lv_obj_t *ui_btnStopTimer = NULL;lv_obj_t *ui_lblStop = NULL;lv_obj_t *ui_btnResetTimer = NULL;lv_obj_t *ui_lblReset = NULL;lv_obj_t *ui_barTimer = NULL;lv_obj_t *ui_btnGoToDashboardScreen = NULL;lv_obj_t *ui_Spinbox2 = NULL;lv_obj_t *ui_btnClearTimer = NULL;lv_obj_t *ui_lblClear = NULL;lv_obj_t *ui_txtTimeRemaining = NULL;lv_obj_t *ui_pnlEnterTime = NULL;lv_obj_t *ui_txtTimerStartValue = NULL;lv_obj_t *ui_swtModeMinOrSec = NULL;lv_obj_t *ui_Label3 = NULL;lv_obj_t *ui_Label2 = NULL;lv_obj_t *ui_btnGoToDebugScreen = NULL;
 // event funtions

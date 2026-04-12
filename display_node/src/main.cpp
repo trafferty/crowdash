@@ -230,7 +230,7 @@ void initNTP() {
 
     if (attempts < 20) {
         char buf[40];
-        strftime(buf, sizeof(buf), "%a %b %d %Y %H:%M:%S", &timeinfo);
+        strftime(buf, sizeof(buf), "%a %b %d %Y %I:%M:%S%p", &timeinfo);
         ui_log("Time synced: %s", buf);
         timeInitialized = true;
     } else {
@@ -334,7 +334,10 @@ void loop() {
         if (getLocalTime(&timeinfo)) {
             char timeStr[16];
             char dateStr[32];
-            strftime(timeStr, sizeof(timeStr), "%H:%M", &timeinfo);
+            int h = timeinfo.tm_hour, m = timeinfo.tm_min;
+            int h12 = h % 12; if (h12 == 0) h12 = 12;
+            snprintf(timeStr, sizeof(timeStr), "%d:%02d%s",
+                     h12, m, (h < 12) ? "am" : "pm");
             strftime(dateStr, sizeof(dateStr), "%A, %b %d", &timeinfo);
             ui_update_time(timeStr, dateStr);
         }
