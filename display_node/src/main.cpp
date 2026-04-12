@@ -128,9 +128,9 @@ PubSubClient mqttClient(wifiClientSecure);
 // ============================================================
 // NTP Time Configuration
 // ============================================================
+// POSIX TZ string: CST6CDT handles DST automatically (Mar 2nd Sun -> Nov 1st Sun)
+const char* NTP_TZ     = "CST6CDT,M3.2.0,M11.1.0";
 const char* NTP_SERVER = "pool.ntp.org";
-const long GMT_OFFSET_SEC = -6 * 3600;      // CST (UTC-6)
-const int DAYLIGHT_OFFSET_SEC = 3600;       // DST adjustment
 static bool timeInitialized = false;
 
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
@@ -203,7 +203,7 @@ void connectWiFi() {
 
 void initNTP() {
     Serial.print("Syncing time with NTP...");
-    configTime(GMT_OFFSET_SEC, DAYLIGHT_OFFSET_SEC, NTP_SERVER);
+    configTime(NTP_TZ, NTP_SERVER);
 
     struct tm timeinfo;
     int attempts = 0;

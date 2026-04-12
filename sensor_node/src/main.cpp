@@ -5,13 +5,11 @@
 #include <DHTesp.h>
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
-#include <NTPClient.h>
-#include <WiFiUdp.h>
 #include <time.h>
 #include "credentials.h"
 #include "sierra_wifi_defs.h"
 
-#define version_str "2025_11_23: v2.2: Changed to ESPAsyncWebServer."
+#define version_str "2026_04_12: v2.4: Auto-DST via configTime POSIX TZ string, removed NTPClient dependency."
 
 // Uncomment to use mobile IP/hostname instead of porch
 #define MOBILE
@@ -39,7 +37,6 @@ static const IPAddress dnsIP    (DNS1, DNS2, DNS3, DNS4);
 
 // --- Timing ---
 #define PUBLISH_INTERVAL_MS 300000   // 5 minutes
-#define NTP_INTERVAL_MS     3600000  // 1 hour
 
 // --- MQTT topics ---
 static const char* TOPIC_OUTDOOR   = "crowpanel/outdoor";
@@ -53,12 +50,9 @@ DHTesp dhtEnclosure;
 BearSSL::WiFiClientSecure wifiClientSecure;
 PubSubClient mqttClient(wifiClientSecure);
 
-WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP);
 AsyncWebServer server(80);
 
-unsigned long lastPublish   = 0;
-unsigned long lastNTPUpdate = 0;
+unsigned long lastPublish = 0;
 int reconnectAttempts = 0;
 
 // Last known readings (for web display)
@@ -89,13 +83,22 @@ void connectWiFi() {
 
 // --- NTP + Web Server ---
 void setupOnline() {
-    Serial.println("Starting NTP time client...");
-    timeClient.begin();
-    timeClient.setTimeOffset(-6 * 3600);  // CST (UTC-6)
-    delay(1000);
-    timeClient.update();
-    Serial.println(timeClient.getFormattedTime());
-    lastNTPUpdate = millis();
+    // POSIX TZ string: CST6CDT handles DST automatically (Mar 2nd Sun -> Nov 1st Sun)
+    Serial.println("Starting NTP (configTime with auto-DST)...");
+    configTime("CST6CDT,M3.2.0,M11.1.0", "pool.ntp.org");
+    // Wait for time to sync
+    time_t now = 0;
+    int attempts = 0;
+    while (now < 1000000000 && attempts < 20) {
+        delay(500);
+        now = time(nullptr);
+        attempts++;
+    }
+    struct tm ti;
+    localtime_r(&now, &ti);
+    Serial.printf("Time synced: %04d-%02d-%02dT%02d:%02d:%02d\n",
+        ti.tm_year+1900, ti.tm_mon+1, ti.tm_mday,
+        ti.tm_hour, ti.tm_min, ti.tm_sec);
 
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
         Serial.println(" - Handling request for /...");
@@ -137,20 +140,14 @@ void connectMQTT() {
     }
 }
 
-// --- NTP timestamp builder (ISO 8601) ---
+// --- Timestamp builder (ISO 8601, local time with auto-DST) ---
 String buildTimeDateStr() {
-    time_t epochTime = timeClient.getEpochTime();
-    struct tm *ptm = gmtime((time_t *)&epochTime);
-    int yr  = ptm->tm_year + 1900;
-    int mon = ptm->tm_mon  + 1;
-    int day = ptm->tm_mday;
-    String ts = String(yr) + "-";
-    if (mon < 10) ts += "0";
-    ts += String(mon) + "-";
-    if (day < 10) ts += "0";
-    ts += String(day) + "T";
-    ts += timeClient.getFormattedTime();
-    return ts;
+    time_t now = time(nullptr);
+    struct tm ti;
+    localtime_r(&now, &ti);
+    char buf[20];
+    strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%S", &ti);
+    return String(buf);
 }
 
 // --- Publish helper (includes timestamp) ---
@@ -288,12 +285,6 @@ void loop() {
         connectMQTT();
     }
     mqttClient.loop();
-
-    // NTP hourly refresh
-    if (millis() - lastNTPUpdate >= NTP_INTERVAL_MS) {
-        lastNTPUpdate = millis();
-        timeClient.update();
-    }
 
     // Publish on interval
     if (millis() - lastPublish >= PUBLISH_INTERVAL_MS) {
