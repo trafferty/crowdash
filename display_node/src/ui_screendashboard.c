@@ -3,15 +3,15 @@
 // LVGL version: 8.3.11
 // Project name: crowdash
 
-#include "ui.h"
+#include "../ui.h"
 
-lv_obj_t *ui_screendashboard = NULL;lv_obj_t *ui_pnlTimeDate = NULL;lv_obj_t *ui_lblTimeOfDay = NULL;lv_obj_t *ui_lblDate = NULL;lv_obj_t *ui_pnlOutsideTemp = NULL;lv_obj_t *ui_chtTemp = NULL;lv_obj_t *ui_chtHumidity = NULL;lv_obj_t *ui_lblCurrentTemp = NULL;lv_obj_t *ui_lblCurrentHumidity = NULL;lv_obj_t *ui_pnlCurrentWeather = NULL;lv_obj_t *ui_imgCurrentWeather = NULL;lv_obj_t *ui_btnGoToTimers = NULL;lv_obj_t *ui_pnlForecast = NULL;lv_obj_t *ui_pnlForecastD0 = NULL;lv_obj_t *ui_imgForecastD0 = NULL;lv_obj_t *ui_lblForecastTempD0 = NULL;lv_obj_t *ui_lblForecastDayD0 = NULL;lv_obj_t *ui_pnlForecastD1 = NULL;lv_obj_t *ui_imgForecastD1 = NULL;lv_obj_t *ui_lblForecastTempD1 = NULL;lv_obj_t *ui_lblForecastDayD1 = NULL;lv_obj_t *ui_pnlForecastD2 = NULL;lv_obj_t *ui_imgForecastD2 = NULL;lv_obj_t *ui_lblForecastTempD2 = NULL;lv_obj_t *ui_lblForecastDayD2 = NULL;lv_obj_t *ui_pnlForecastD3 = NULL;lv_obj_t *ui_imgForecastD3 = NULL;lv_obj_t *ui_lblForecastTempD3 = NULL;lv_obj_t *ui_lblForecastDayD3 = NULL;lv_obj_t *ui_pnlForecastD4 = NULL;lv_obj_t *ui_imgForecastD4 = NULL;lv_obj_t *ui_lblForecastTempD4 = NULL;lv_obj_t *ui_lblForecastDayD4 = NULL;lv_obj_t *ui_pnlStatus = NULL;lv_obj_t *ui_pnlGarageDoorStatus = NULL;lv_obj_t *ui_lblGarageDoor = NULL;lv_obj_t *ui_lblGarageDoorStatus = NULL;lv_obj_t *ui_pnlPlaceHolderStatus = NULL;lv_obj_t *ui_lblEvent1 = NULL;lv_obj_t *ui_lblEventStatus1 = NULL;lv_obj_t *ui_pnlCalEvents = NULL;lv_obj_t *ui_txtCalEvents = NULL;lv_obj_t *ui_pnlEnclosure = NULL;lv_obj_t *ui_Label9 = NULL;lv_obj_t *ui_lblEnclosureTemp = NULL;lv_obj_t *ui_lblEnclosureHumidity = NULL;lv_obj_t *ui_pnlIndoor = NULL;lv_obj_t *ui_Label1 = NULL;lv_obj_t *ui_lblIndoorTemp = NULL;lv_obj_t *ui_lblIndoorHumidity = NULL;lv_obj_t *ui_lblTemp = NULL;lv_obj_t *ui_lblHumidity = NULL;
+lv_obj_t *ui_screendashboard = NULL;lv_obj_t *ui_pnlTimeDate = NULL;lv_obj_t *ui_lblTimeOfDay = NULL;lv_obj_t *ui_lblDate = NULL;lv_obj_t *ui_pnlOutsideTemp = NULL;lv_obj_t *ui_chtTemp = NULL;lv_obj_t *ui_chtHumidity = NULL;lv_obj_t *ui_lblCurrentTemp = NULL;lv_obj_t *ui_lblCurrentHumidity = NULL;lv_obj_t *ui_pnlCurrentWeather = NULL;lv_obj_t *ui_imgCurrentWeather = NULL;lv_obj_t *ui_btnGoToTimerScreen = NULL;lv_obj_t *ui_pnlForecast = NULL;lv_obj_t *ui_pnlForecastD0 = NULL;lv_obj_t *ui_imgForecastD0 = NULL;lv_obj_t *ui_lblForecastTempD0 = NULL;lv_obj_t *ui_lblForecastDayD0 = NULL;lv_obj_t *ui_pnlForecastD1 = NULL;lv_obj_t *ui_imgForecastD1 = NULL;lv_obj_t *ui_lblForecastTempD1 = NULL;lv_obj_t *ui_lblForecastDayD1 = NULL;lv_obj_t *ui_pnlForecastD2 = NULL;lv_obj_t *ui_imgForecastD2 = NULL;lv_obj_t *ui_lblForecastTempD2 = NULL;lv_obj_t *ui_lblForecastDayD2 = NULL;lv_obj_t *ui_pnlForecastD3 = NULL;lv_obj_t *ui_imgForecastD3 = NULL;lv_obj_t *ui_lblForecastTempD3 = NULL;lv_obj_t *ui_lblForecastDayD3 = NULL;lv_obj_t *ui_pnlForecastD4 = NULL;lv_obj_t *ui_imgForecastD4 = NULL;lv_obj_t *ui_lblForecastTempD4 = NULL;lv_obj_t *ui_lblForecastDayD4 = NULL;lv_obj_t *ui_pnlStatus = NULL;lv_obj_t *ui_pnlGarageDoorStatus = NULL;lv_obj_t *ui_lblGarageDoor = NULL;lv_obj_t *ui_lblGarageDoorStatus = NULL;lv_obj_t *ui_pnlPlaceHolderStatus = NULL;lv_obj_t *ui_lblEvent1 = NULL;lv_obj_t *ui_lblEventStatus1 = NULL;lv_obj_t *ui_pnlCalEvents = NULL;lv_obj_t *ui_txtCalEvents = NULL;lv_obj_t *ui_pnlEnclosure = NULL;lv_obj_t *ui_Label9 = NULL;lv_obj_t *ui_lblEnclosureTemp = NULL;lv_obj_t *ui_lblEnclosureHumidity = NULL;lv_obj_t *ui_pnlIndoor = NULL;lv_obj_t *ui_Label1 = NULL;lv_obj_t *ui_lblIndoorTemp = NULL;lv_obj_t *ui_lblIndoorHumidity = NULL;lv_obj_t *ui_lblTemp = NULL;lv_obj_t *ui_lblHumidity = NULL;lv_obj_t *ui_lblGarageTime = NULL;
 // event funtions
-void ui_event_btnGoToTimers( lv_event_t * e) {
+void ui_event_btnGoToTimerScreen( lv_event_t * e) {
     lv_event_code_t event_code = lv_event_get_code(e);
 
 if ( event_code == LV_EVENT_CLICKED) {
-      _ui_screen_change( &ui_screentimer, LV_SCR_LOAD_ANIM_MOVE_LEFT, 500, 0, &ui_screentimer_screen_init);
+      _ui_screen_change( &ui_screentimer, LV_SCR_LOAD_ANIM_MOVE_LEFT, 100, 0, &ui_screentimer_screen_init);
 }
 }
 
@@ -145,19 +145,19 @@ lv_obj_set_align( ui_imgCurrentWeather, LV_ALIGN_CENTER );
 lv_obj_add_flag( ui_imgCurrentWeather, LV_OBJ_FLAG_ADV_HITTEST );   /// Flags
 lv_obj_clear_flag( ui_imgCurrentWeather, LV_OBJ_FLAG_SCROLLABLE );    /// Flags
 
-ui_btnGoToTimers = lv_imgbtn_create(ui_screendashboard);
-lv_imgbtn_set_src(ui_btnGoToTimers, LV_IMGBTN_STATE_RELEASED, NULL, &ui_img_rt_arrow_png, NULL);
-lv_imgbtn_set_src(ui_btnGoToTimers, LV_IMGBTN_STATE_PRESSED, NULL, &ui_img_rt_arrow_png, NULL);
-lv_obj_set_width( ui_btnGoToTimers, 64);
-lv_obj_set_height( ui_btnGoToTimers, 64);
-lv_obj_set_x( ui_btnGoToTimers, 356 );
-lv_obj_set_y( ui_btnGoToTimers, 195 );
-lv_obj_set_align( ui_btnGoToTimers, LV_ALIGN_CENTER );
-lv_obj_set_style_radius(ui_btnGoToTimers, 10, LV_PART_MAIN| LV_STATE_DEFAULT);
-lv_obj_set_style_bg_color(ui_btnGoToTimers, lv_color_hex(0x4D4F5B), LV_PART_MAIN | LV_STATE_DEFAULT );
-lv_obj_set_style_bg_opa(ui_btnGoToTimers, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
-lv_obj_set_style_outline_color(ui_btnGoToTimers, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT );
-lv_obj_set_style_outline_opa(ui_btnGoToTimers, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
+ui_btnGoToTimerScreen = lv_imgbtn_create(ui_screendashboard);
+lv_imgbtn_set_src(ui_btnGoToTimerScreen, LV_IMGBTN_STATE_RELEASED, NULL, &ui_img_rt_arrow_png, NULL);
+lv_imgbtn_set_src(ui_btnGoToTimerScreen, LV_IMGBTN_STATE_PRESSED, NULL, &ui_img_rt_arrow_png, NULL);
+lv_obj_set_width( ui_btnGoToTimerScreen, 64);
+lv_obj_set_height( ui_btnGoToTimerScreen, 64);
+lv_obj_set_x( ui_btnGoToTimerScreen, 356 );
+lv_obj_set_y( ui_btnGoToTimerScreen, 195 );
+lv_obj_set_align( ui_btnGoToTimerScreen, LV_ALIGN_CENTER );
+lv_obj_set_style_radius(ui_btnGoToTimerScreen, 10, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_bg_color(ui_btnGoToTimerScreen, lv_color_hex(0x4D4F5B), LV_PART_MAIN | LV_STATE_DEFAULT );
+lv_obj_set_style_bg_opa(ui_btnGoToTimerScreen, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_outline_color(ui_btnGoToTimerScreen, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT );
+lv_obj_set_style_outline_opa(ui_btnGoToTimerScreen, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_pnlForecast = lv_obj_create(ui_screendashboard);
 lv_obj_set_width( ui_pnlForecast, 537);
@@ -369,9 +369,9 @@ lv_obj_clear_flag( ui_pnlStatus, LV_OBJ_FLAG_SCROLLABLE );    /// Flags
 
 ui_pnlGarageDoorStatus = lv_obj_create(ui_pnlStatus);
 lv_obj_set_width( ui_pnlGarageDoorStatus, 190);
-lv_obj_set_height( ui_pnlGarageDoorStatus, 82);
+lv_obj_set_height( ui_pnlGarageDoorStatus, 83);
 lv_obj_set_x( ui_pnlGarageDoorStatus, 0 );
-lv_obj_set_y( ui_pnlGarageDoorStatus, -108 );
+lv_obj_set_y( ui_pnlGarageDoorStatus, -101 );
 lv_obj_set_align( ui_pnlGarageDoorStatus, LV_ALIGN_CENTER );
 lv_obj_clear_flag( ui_pnlGarageDoorStatus, LV_OBJ_FLAG_SCROLLABLE );    /// Flags
 lv_obj_set_style_bg_color(ui_pnlGarageDoorStatus, lv_color_hex(0x1D254A), LV_PART_MAIN | LV_STATE_DEFAULT );
@@ -381,7 +381,7 @@ ui_lblGarageDoor = lv_label_create(ui_pnlGarageDoorStatus);
 lv_obj_set_width( ui_lblGarageDoor, LV_SIZE_CONTENT);  /// 1
 lv_obj_set_height( ui_lblGarageDoor, LV_SIZE_CONTENT);   /// 1
 lv_obj_set_x( ui_lblGarageDoor, 0 );
-lv_obj_set_y( ui_lblGarageDoor, -15 );
+lv_obj_set_y( ui_lblGarageDoor, -24 );
 lv_obj_set_align( ui_lblGarageDoor, LV_ALIGN_CENTER );
 lv_label_set_text(ui_lblGarageDoor,"Garage Door");
 lv_obj_set_style_text_font(ui_lblGarageDoor, &lv_font_montserrat_24, LV_PART_MAIN| LV_STATE_DEFAULT);
@@ -390,7 +390,7 @@ ui_lblGarageDoorStatus = lv_label_create(ui_pnlGarageDoorStatus);
 lv_obj_set_width( ui_lblGarageDoorStatus, LV_SIZE_CONTENT);  /// 1
 lv_obj_set_height( ui_lblGarageDoorStatus, LV_SIZE_CONTENT);   /// 1
 lv_obj_set_x( ui_lblGarageDoorStatus, 0 );
-lv_obj_set_y( ui_lblGarageDoorStatus, 19 );
+lv_obj_set_y( ui_lblGarageDoorStatus, 5 );
 lv_obj_set_align( ui_lblGarageDoorStatus, LV_ALIGN_CENTER );
 lv_label_set_text(ui_lblGarageDoorStatus,"Closed");
 lv_obj_set_style_text_font(ui_lblGarageDoorStatus, &lv_font_montserrat_28, LV_PART_MAIN| LV_STATE_DEFAULT);
@@ -398,8 +398,8 @@ lv_obj_set_style_text_font(ui_lblGarageDoorStatus, &lv_font_montserrat_28, LV_PA
 ui_pnlPlaceHolderStatus = lv_obj_create(ui_pnlStatus);
 lv_obj_set_width( ui_pnlPlaceHolderStatus, 190);
 lv_obj_set_height( ui_pnlPlaceHolderStatus, 82);
-lv_obj_set_x( ui_pnlPlaceHolderStatus, 0 );
-lv_obj_set_y( ui_pnlPlaceHolderStatus, -14 );
+lv_obj_set_x( ui_pnlPlaceHolderStatus, 1 );
+lv_obj_set_y( ui_pnlPlaceHolderStatus, 43 );
 lv_obj_set_align( ui_pnlPlaceHolderStatus, LV_ALIGN_CENTER );
 lv_obj_clear_flag( ui_pnlPlaceHolderStatus, LV_OBJ_FLAG_SCROLLABLE );    /// Flags
 lv_obj_set_style_bg_color(ui_pnlPlaceHolderStatus, lv_color_hex(0x1D254A), LV_PART_MAIN | LV_STATE_DEFAULT );
@@ -433,12 +433,11 @@ lv_obj_clear_flag( ui_pnlCalEvents, LV_OBJ_FLAG_SCROLLABLE );    /// Flags
 
 ui_txtCalEvents = lv_textarea_create(ui_pnlCalEvents);
 lv_obj_set_width( ui_txtCalEvents, 472);
-lv_obj_set_height( ui_txtCalEvents, LV_SIZE_CONTENT);   /// 192
+lv_obj_set_height( ui_txtCalEvents, LV_SIZE_CONTENT);   /// 210
 lv_obj_set_x( ui_txtCalEvents, 0 );
-lv_obj_set_y( ui_txtCalEvents, 1 );
+lv_obj_set_y( ui_txtCalEvents, -13 );
 lv_obj_set_align( ui_txtCalEvents, LV_ALIGN_CENTER );
-lv_textarea_set_text(ui_txtCalEvents,"012345678901234567890123456789012345678901234567890123456789012\n[1d] Tom - Dentist\n[2d] Tom - Dentist\n[3d] Tom - Dentist\n[4d] Tom - Dentist\n[5d] Tom - Dentist\n[6d] Tom - Dentist\n[7d] Tom - Dentist\n[8d] Tom - Dentist\n[9d] Tom - Dentist\n[10d] Tom - Dentist");
-lv_textarea_set_one_line(ui_txtCalEvents,true);
+lv_textarea_set_text(ui_txtCalEvents,"012345678901234567890123456789012345678901234567890123456789012\n[1d] Tom - Dentist\n");
 lv_obj_set_style_text_color(ui_txtCalEvents, lv_color_hex(0xB4E4F7), LV_PART_MAIN | LV_STATE_DEFAULT );
 lv_obj_set_style_text_opa(ui_txtCalEvents, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
 lv_obj_set_style_text_align(ui_txtCalEvents, LV_TEXT_ALIGN_LEFT, LV_PART_MAIN| LV_STATE_DEFAULT);
@@ -548,7 +547,16 @@ lv_obj_set_style_text_color(ui_lblHumidity, lv_color_hex(0x852CA3), LV_PART_MAIN
 lv_obj_set_style_text_opa(ui_lblHumidity, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
 lv_obj_set_style_text_font(ui_lblHumidity, &lv_font_montserrat_10, LV_PART_MAIN| LV_STATE_DEFAULT);
 
-lv_obj_add_event_cb(ui_btnGoToTimers, ui_event_btnGoToTimers, LV_EVENT_ALL, NULL);
+ui_lblGarageTime = lv_label_create(ui_screendashboard);
+lv_obj_set_width( ui_lblGarageTime, LV_SIZE_CONTENT);  /// 1
+lv_obj_set_height( ui_lblGarageTime, LV_SIZE_CONTENT);   /// 1
+lv_obj_set_x( ui_lblGarageTime, -278 );
+lv_obj_set_y( ui_lblGarageTime, -8 );
+lv_obj_set_align( ui_lblGarageTime, LV_ALIGN_CENTER );
+lv_label_set_text(ui_lblGarageTime,"4/05/26 - 12:34p");
+lv_obj_set_style_text_font(ui_lblGarageTime, &lv_font_montserrat_12, LV_PART_MAIN| LV_STATE_DEFAULT);
+
+lv_obj_add_event_cb(ui_btnGoToTimerScreen, ui_event_btnGoToTimerScreen, LV_EVENT_ALL, NULL);
 
 }
 
@@ -568,7 +576,7 @@ ui_lblCurrentTemp= NULL;
 ui_lblCurrentHumidity= NULL;
 ui_pnlCurrentWeather= NULL;
 ui_imgCurrentWeather= NULL;
-ui_btnGoToTimers= NULL;
+ui_btnGoToTimerScreen= NULL;
 ui_pnlForecast= NULL;
 ui_pnlForecastD0= NULL;
 ui_imgForecastD0= NULL;
@@ -609,5 +617,6 @@ ui_lblIndoorTemp= NULL;
 ui_lblIndoorHumidity= NULL;
 ui_lblTemp= NULL;
 ui_lblHumidity= NULL;
+ui_lblGarageTime= NULL;
 
 }

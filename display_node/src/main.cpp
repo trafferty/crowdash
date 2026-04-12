@@ -132,34 +132,43 @@ PubSubClient mqttClient(wifiClientSecure);
 const char* NTP_TZ     = "CST6CDT,M3.2.0,M11.1.0";
 const char* NTP_SERVER = "pool.ntp.org";
 static bool timeInitialized = false;
+static uint32_t lv_tick_prev = 0;
+
+// Delay while keeping LVGL ticking so the display keeps updating.
+// Replaces bare delay() in blocking setup functions.
+static void lv_delay_ms(uint32_t ms) {
+    uint32_t deadline = millis() + ms;
+    while (millis() < deadline) {
+        uint32_t now = millis();
+        lv_tick_inc(now - lv_tick_prev);
+        lv_tick_prev = now;
+        lv_timer_handler();
+        delay(5);
+    }
+}
 
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
     char json[length + 1];
     memcpy(json, payload, length);
     json[length] = '\0';
 
-    Serial.print("MQTT: ");
-    Serial.print(topic);
-    Serial.print(" -> ");
-    Serial.println(json);
+    ui_log("MQTT [%s]: %s", topic, json);
 
     // Handle garage door status
     if (strstr(topic, "garage")) {
         StaticJsonDocument<128> doc;
         DeserializationError err = deserializeJson(doc, json);
         if (err != DeserializationError::Ok) {
-            Serial.print("Garage JSON parse error: ");
-            Serial.println(err.c_str());
+            ui_log("ERROR: garage JSON parse: %s", err.c_str());
         } else {
             const char* status = doc["event"];
             const char* ts     = doc["ts"] | "";
             if (status) {
-                Serial.print("Garage status: ");
-                Serial.println(status);
+                ui_log("Garage: %s", status);
                 ui_update_garage_status(status);
                 if (*ts) ui_update_garage_time(ts);
             } else {
-                Serial.println("Garage JSON missing 'event' field");
+                ui_log("WARN: garage JSON missing 'event' field");
             }
         }
         return;
@@ -168,7 +177,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     // Handle sensor readings (now in Fahrenheit from sensor)
     StaticJsonDocument<128> doc;
     if (deserializeJson(doc, json) != DeserializationError::Ok) {
-        Serial.println("JSON parse error");
+        ui_log("ERROR: sensor JSON parse failed");
         return;
     }
 
@@ -193,59 +202,55 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 }
 
 void connectWiFi() {
-    Serial.print("Connecting to WiFi");
+    ui_log("Connecting to WiFi...");
     WiFi.mode(WIFI_STA);
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
     int attempts = 0;
     while (WiFi.status() != WL_CONNECTED && attempts < 40) {
-        delay(500);
-        Serial.print(".");
+        lv_delay_ms(500);
         attempts++;
     }
     if (WiFi.status() == WL_CONNECTED) {
-        Serial.println();
-        Serial.print("Connected, IP: ");
-        Serial.println(WiFi.localIP());
+        ui_log("WiFi connected, IP: %s", WiFi.localIP().toString().c_str());
     } else {
-        Serial.println("\nWiFi connection failed");
+        ui_log("ERROR: WiFi connection failed");
     }
 }
 
 void initNTP() {
-    Serial.print("Syncing time with NTP...");
+    ui_log("Syncing NTP...");
     configTzTime(NTP_TZ, NTP_SERVER);
 
     struct tm timeinfo;
     int attempts = 0;
     while (!getLocalTime(&timeinfo) && attempts < 20) {
-        delay(500);
-        Serial.print(".");
+        lv_delay_ms(500);
         attempts++;
     }
 
     if (attempts < 20) {
-        Serial.println(" synchronized");
-        Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+        char buf[40];
+        strftime(buf, sizeof(buf), "%a %b %d %Y %H:%M:%S", &timeinfo);
+        ui_log("Time synced: %s", buf);
         timeInitialized = true;
     } else {
-        Serial.println(" FAILED");
+        ui_log("ERROR: NTP sync failed");
     }
 }
 
 void connectMQTT() {
     int attempts = 0;
     while (!mqttClient.connected() && attempts < 5) {
-        Serial.print("Connecting to MQTT...");
+        ui_log("Connecting to MQTT...");
         if (mqttClient.connect("crowpanel-display", MQTT_USER, MQTT_PASSWORD)) {
-            Serial.println("connected");
+            ui_log("MQTT connected");
             mqttClient.subscribe("crowpanel/outdoor");
             mqttClient.subscribe("crowpanel/enclosure");
             mqttClient.subscribe("crowpanel/garage");
         } else {
             attempts++;
-            Serial.print("failed, rc=");
-            Serial.println(mqttClient.state());
-            delay(3000);
+            ui_log("ERROR: MQTT failed, rc=%d", mqttClient.state());
+            lv_delay_ms(3000);
         }
     }
 }
@@ -255,7 +260,7 @@ void connectMQTT() {
 // ============================================================
 void setup() {
     Serial.begin(9600);
-    Serial.println("\nCrowPanel Display Node starting...");
+    ui_log("CrowPanel Display Node starting...");
 
     // GPIO 38 LOW (per example)
     pinMode(38, OUTPUT);
@@ -292,12 +297,13 @@ void setup() {
     ledcAttachPin(TFT_BL, 1);
     ledcWrite(1, 255);
 
-    // Build UI
+    // Build UI, then immediately switch to logger screen for setup
     ui_init();
     ui_app_init();
+    lv_disp_load_scr(ui_screenlogger);
     lv_timer_handler();
 
-    // WiFi + MQTT
+    // WiFi + MQTT — log messages appear on screen as they happen
     connectWiFi();
     initNTP();  // Initialize NTP after WiFi connects
     wifiClientSecure.setInsecure();
@@ -305,9 +311,13 @@ void setup() {
     mqttClient.setCallback(mqttCallback);
     mqttClient.setBufferSize(512);
     connectMQTT();
-}
 
-static uint32_t lv_tick_prev = 0;
+    // Setup complete — hand off to dashboard
+    ui_log("Setup complete, loading dashboard...");
+    lv_delay_ms(500);  // brief pause so the last log line is readable
+    lv_disp_load_scr(ui_screendashboard);
+    lv_timer_handler();
+}
 
 void loop() {
     // Feed LVGL tick — required for UI updates

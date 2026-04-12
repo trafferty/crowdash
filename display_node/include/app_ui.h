@@ -7,6 +7,11 @@
 extern "C" {
 #endif
 
+// Timestamped log: writes to Serial and appends to the logger screen.
+// Safe to call before ui_init() — output goes to Serial only until the
+// logger widget exists.
+void ui_log(const char* fmt, ...);
+
 // Call once after ui_init() to set up chart series
 void ui_app_init(void);
 

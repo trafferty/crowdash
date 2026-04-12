@@ -24,8 +24,8 @@ extern lv_obj_t *ui_lblCurrentTemp;
 extern lv_obj_t *ui_lblCurrentHumidity;
 extern lv_obj_t *ui_pnlCurrentWeather;
 extern lv_obj_t *ui_imgCurrentWeather;
-extern void ui_event_btnGoToTimers( lv_event_t * e);
-extern lv_obj_t *ui_btnGoToTimers;
+extern void ui_event_btnGoToTimerScreen( lv_event_t * e);
+extern lv_obj_t *ui_btnGoToTimerScreen;
 extern lv_obj_t *ui_pnlForecast;
 extern lv_obj_t *ui_pnlForecastD0;
 extern lv_obj_t *ui_imgForecastD0;
@@ -66,6 +66,7 @@ extern lv_obj_t *ui_lblIndoorTemp;
 extern lv_obj_t *ui_lblIndoorHumidity;
 extern lv_obj_t *ui_lblTemp;
 extern lv_obj_t *ui_lblHumidity;
+extern lv_obj_t *ui_lblGarageTime;
 // CUSTOM VARIABLES
 
 #ifdef __cplusplus

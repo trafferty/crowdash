@@ -5,6 +5,45 @@
 #include "ui.h"
 #include "app_ui.h"
 #include <stdio.h>
+#include <stdarg.h>
+#include <time.h>
+#include <Arduino.h>
+
+// ============================================================
+// Logger
+// ============================================================
+#define LOG_MAX_CHARS 4000
+
+void ui_log(const char* fmt, ...)
+{
+    char msg[256];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(msg, sizeof(msg), fmt, args);
+    va_end(args);
+
+    // Build timestamped line
+    char line[300];
+    struct tm ti;
+    if (getLocalTime(&ti, 0)) {
+        snprintf(line, sizeof(line), "[%02d:%02d:%02d] %s\n",
+                 ti.tm_hour, ti.tm_min, ti.tm_sec, msg);
+    } else {
+        snprintf(line, sizeof(line), "[--:--:--] %s\n", msg);
+    }
+
+    Serial.print(line);
+
+    if (!ui_txtLogger) return;
+
+    // Roll over when the textarea gets too long
+    if (strlen(lv_textarea_get_text(ui_txtLogger)) > LOG_MAX_CHARS) {
+        lv_textarea_set_text(ui_txtLogger, "[...log cleared...]\n");
+    }
+
+    lv_textarea_set_cursor_pos(ui_txtLogger, LV_TEXTAREA_CURSOR_LAST);
+    lv_textarea_add_text(ui_txtLogger, line);
+}
 
 // ============================================================
 // Chart management

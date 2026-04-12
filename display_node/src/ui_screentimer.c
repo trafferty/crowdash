@@ -2,155 +2,29 @@
 // SquareLine Studio version: SquareLine Studio 1.6.0
 // LVGL version: 8.3.11
 // Project name: crowdash
-// Timer logic added manually.
 
-#include "ui.h"
-#include <stdio.h>
-#include <stdlib.h>
+#include "../ui.h"
 
-lv_obj_t *ui_screentimer = NULL;lv_obj_t *ui_kbNumberPad = NULL;lv_obj_t *ui_btnStartTimer = NULL;lv_obj_t *ui_lblStart = NULL;lv_obj_t *ui_btnStopTimer = NULL;lv_obj_t *ui_lblStop = NULL;lv_obj_t *ui_btnResetTimer = NULL;lv_obj_t *ui_lblReset = NULL;lv_obj_t *ui_barTimer = NULL;lv_obj_t *ui_btnGoToTimers1 = NULL;lv_obj_t *ui_Spinbox2 = NULL;lv_obj_t *ui_btnClearTimer = NULL;lv_obj_t *ui_lblClear = NULL;lv_obj_t *ui_txtTimeRemaining = NULL;lv_obj_t *ui_pnlEnterTime = NULL;lv_obj_t *ui_txtTimerStartValue = NULL;lv_obj_t *ui_swtModeMinOrSec = NULL;lv_obj_t *ui_Label3 = NULL;lv_obj_t *ui_Label2 = NULL;
-
-// ============================================================
-// Timer state
-// ============================================================
-static int32_t       timer_total_sec  = 0;
-static int32_t       timer_remain_sec = 0;
-static lv_timer_t   *countdown_hdl   = NULL;
-
-#define TIMER_COLOR_RUNNING  lv_color_hex(0x00B000)
-#define TIMER_COLOR_STOPPED  lv_color_hex(0x0C0D60)
-#define TIMER_COLOR_EXPIRED  lv_color_hex(0xFF0000)
-
-static void set_outline_color(lv_color_t color)
-{
-    if (!ui_txtTimeRemaining) return;
-    lv_obj_set_style_outline_color(ui_txtTimeRemaining, color,
-                                   LV_PART_MAIN | LV_STATE_DEFAULT);
-}
-
-static void update_display(void)
-{
-    if (!ui_txtTimeRemaining || !ui_barTimer) return;
-    int mm = (int)(timer_remain_sec / 60);
-    int ss = (int)(timer_remain_sec % 60);
-    char buf[8];
-    snprintf(buf, sizeof(buf), "%02d:%02d", mm, ss);
-    lv_textarea_set_text(ui_txtTimeRemaining, buf);
-
-    int32_t pct = (timer_total_sec > 0)
-                  ? (int32_t)((int64_t)timer_remain_sec * 100 / timer_total_sec)
-                  : 0;
-    lv_bar_set_value(ui_barTimer, (int)pct, LV_ANIM_OFF);
-}
-
-static void stop_countdown(void)
-{
-    if (countdown_hdl) {
-        lv_timer_del(countdown_hdl);
-        countdown_hdl = NULL;
-    }
-}
-
-static void countdown_cb(lv_timer_t *timer)
-{
-    (void)timer;
-    if (timer_remain_sec > 0) {
-        timer_remain_sec--;
-        update_display();
-    }
-    if (timer_remain_sec <= 0) {
-        stop_countdown();
-        if (ui_txtTimeRemaining) lv_textarea_set_text(ui_txtTimeRemaining, "00:00");
-        if (ui_barTimer)         lv_bar_set_value(ui_barTimer, 0, LV_ANIM_OFF);
-        set_outline_color(TIMER_COLOR_EXPIRED);
-    }
-}
-
-static void parse_and_load_timer(void)
-{
-    if (!ui_txtTimerStartValue) return;
-    const char *txt = lv_textarea_get_text(ui_txtTimerStartValue);
-    float val = (float)atof(txt);
-    bool is_seconds = lv_obj_has_state(ui_swtModeMinOrSec, LV_STATE_CHECKED);
-    if (is_seconds) {
-        timer_total_sec = (int32_t)(val + 0.5f);
-    } else {
-        timer_total_sec = (int32_t)(val * 60.0f + 0.5f);
-    }
-    if (timer_total_sec < 0) timer_total_sec = 0;
-    timer_remain_sec = timer_total_sec;
-    update_display();
-    set_outline_color(TIMER_COLOR_STOPPED);
-}
-
-// ============================================================
-// Event functions
-// ============================================================
-void ui_event_btnGoToTimers1(lv_event_t *e)
-{
+lv_obj_t *ui_screentimer = NULL;lv_obj_t *ui_kbNumberPad = NULL;lv_obj_t *ui_btnStartTimer = NULL;lv_obj_t *ui_lblStart = NULL;lv_obj_t *ui_btnStopTimer = NULL;lv_obj_t *ui_lblStop = NULL;lv_obj_t *ui_btnResetTimer = NULL;lv_obj_t *ui_lblReset = NULL;lv_obj_t *ui_barTimer = NULL;lv_obj_t *ui_btnGoToDashboardScreen = NULL;lv_obj_t *ui_Spinbox2 = NULL;lv_obj_t *ui_btnClearTimer = NULL;lv_obj_t *ui_lblClear = NULL;lv_obj_t *ui_txtTimeRemaining = NULL;lv_obj_t *ui_pnlEnterTime = NULL;lv_obj_t *ui_txtTimerStartValue = NULL;lv_obj_t *ui_swtModeMinOrSec = NULL;lv_obj_t *ui_Label3 = NULL;lv_obj_t *ui_Label2 = NULL;lv_obj_t *ui_btnGoToDebugScreen = NULL;
+// event funtions
+void ui_event_btnGoToDashboardScreen( lv_event_t * e) {
     lv_event_code_t event_code = lv_event_get_code(e);
-    if (event_code == LV_EVENT_CLICKED) {
-        _ui_screen_change(&ui_screendashboard, LV_SCR_LOAD_ANIM_MOVE_RIGHT, 500, 0,
-                          &ui_screendashboard_screen_init);
-    }
+
+if ( event_code == LV_EVENT_CLICKED) {
+      _ui_screen_change( &ui_screendashboard, LV_SCR_LOAD_ANIM_MOVE_RIGHT, 100, 0, &ui_screendashboard_screen_init);
+}
 }
 
-static void ui_event_kbNumberPad(lv_event_t *e)
-{
+void ui_event_btnGoToDebugScreen( lv_event_t * e) {
     lv_event_code_t event_code = lv_event_get_code(e);
-    if (event_code == LV_EVENT_READY) {
-        parse_and_load_timer();
-    }
+
+if ( event_code == LV_EVENT_CLICKED) {
+      _ui_screen_change( &ui_screenlogger, LV_SCR_LOAD_ANIM_MOVE_RIGHT, 100, 0, &ui_screenlogger_screen_init);
+}
 }
 
-static void ui_event_btnStartTimer(lv_event_t *e)
-{
-    lv_event_code_t event_code = lv_event_get_code(e);
-    if (event_code == LV_EVENT_CLICKED) {
-        if (timer_remain_sec > 0 && countdown_hdl == NULL) {
-            countdown_hdl = lv_timer_create(countdown_cb, 1000, NULL);
-            set_outline_color(TIMER_COLOR_RUNNING);
-        }
-    }
-}
+// build funtions
 
-static void ui_event_btnStopTimer(lv_event_t *e)
-{
-    lv_event_code_t event_code = lv_event_get_code(e);
-    if (event_code == LV_EVENT_CLICKED) {
-        stop_countdown();
-        set_outline_color(TIMER_COLOR_STOPPED);
-    }
-}
-
-static void ui_event_btnResetTimer(lv_event_t *e)
-{
-    lv_event_code_t event_code = lv_event_get_code(e);
-    if (event_code == LV_EVENT_CLICKED) {
-        stop_countdown();
-        timer_remain_sec = timer_total_sec;
-        update_display();
-        set_outline_color(TIMER_COLOR_STOPPED);
-    }
-}
-
-static void ui_event_btnClearTimer(lv_event_t *e)
-{
-    lv_event_code_t event_code = lv_event_get_code(e);
-    if (event_code == LV_EVENT_CLICKED) {
-        stop_countdown();
-        timer_total_sec  = 0;
-        timer_remain_sec = 0;
-        if (ui_txtTimerStartValue) lv_textarea_set_text(ui_txtTimerStartValue, "");
-        if (ui_txtTimeRemaining)   lv_textarea_set_text(ui_txtTimeRemaining, "00:00");
-        if (ui_barTimer)           lv_bar_set_value(ui_barTimer, 0, LV_ANIM_OFF);
-        set_outline_color(TIMER_COLOR_STOPPED);
-    }
-}
-
-// ============================================================
-// Build function
-// ============================================================
 void ui_screentimer_screen_init(void)
 {
 ui_screentimer = lv_obj_create(NULL);
@@ -164,6 +38,7 @@ lv_obj_set_x( ui_kbNumberPad, 161 );
 lv_obj_set_y( ui_kbNumberPad, 40 );
 lv_obj_set_align( ui_kbNumberPad, LV_ALIGN_CENTER );
 lv_obj_clear_flag( ui_kbNumberPad, LV_OBJ_FLAG_PRESS_LOCK );    /// Flags
+
 lv_obj_set_style_text_font(ui_kbNumberPad, &lv_font_montserrat_48, LV_PART_ITEMS| LV_STATE_DEFAULT);
 
 ui_btnStartTimer = lv_btn_create(ui_screentimer);
@@ -239,7 +114,7 @@ lv_label_set_text(ui_lblReset,"Reset");
 lv_obj_set_style_text_align(ui_lblReset, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_barTimer = lv_bar_create(ui_screentimer);
-lv_bar_set_value(ui_barTimer, 0, LV_ANIM_OFF);
+lv_bar_set_value(ui_barTimer,50,LV_ANIM_OFF);
 lv_bar_set_start_value(ui_barTimer, 0, LV_ANIM_OFF);
 lv_obj_set_width( ui_barTimer, 287);
 lv_obj_set_height( ui_barTimer, 29);
@@ -247,19 +122,19 @@ lv_obj_set_x( ui_barTimer, -225 );
 lv_obj_set_y( ui_barTimer, -222 );
 lv_obj_set_align( ui_barTimer, LV_ALIGN_CENTER );
 
-ui_btnGoToTimers1 = lv_imgbtn_create(ui_screentimer);
-lv_imgbtn_set_src(ui_btnGoToTimers1, LV_IMGBTN_STATE_RELEASED, NULL, &ui_img_lt_arrow_png, NULL);
-lv_imgbtn_set_src(ui_btnGoToTimers1, LV_IMGBTN_STATE_PRESSED, NULL, &ui_img_lt_arrow_png, NULL);
-lv_obj_set_width( ui_btnGoToTimers1, 64);
-lv_obj_set_height( ui_btnGoToTimers1, 64);
-lv_obj_set_x( ui_btnGoToTimers1, -356 );
-lv_obj_set_y( ui_btnGoToTimers1, 194 );
-lv_obj_set_align( ui_btnGoToTimers1, LV_ALIGN_CENTER );
-lv_obj_set_style_radius(ui_btnGoToTimers1, 10, LV_PART_MAIN| LV_STATE_DEFAULT);
-lv_obj_set_style_bg_color(ui_btnGoToTimers1, lv_color_hex(0x4D4F5B), LV_PART_MAIN | LV_STATE_DEFAULT );
-lv_obj_set_style_bg_opa(ui_btnGoToTimers1, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
-lv_obj_set_style_outline_color(ui_btnGoToTimers1, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT );
-lv_obj_set_style_outline_opa(ui_btnGoToTimers1, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
+ui_btnGoToDashboardScreen = lv_imgbtn_create(ui_screentimer);
+lv_imgbtn_set_src(ui_btnGoToDashboardScreen, LV_IMGBTN_STATE_RELEASED, NULL, &ui_img_lt_arrow_png, NULL);
+lv_imgbtn_set_src(ui_btnGoToDashboardScreen, LV_IMGBTN_STATE_PRESSED, NULL, &ui_img_lt_arrow_png, NULL);
+lv_obj_set_width( ui_btnGoToDashboardScreen, 64);
+lv_obj_set_height( ui_btnGoToDashboardScreen, 64);
+lv_obj_set_x( ui_btnGoToDashboardScreen, -356 );
+lv_obj_set_y( ui_btnGoToDashboardScreen, 194 );
+lv_obj_set_align( ui_btnGoToDashboardScreen, LV_ALIGN_CENTER );
+lv_obj_set_style_radius(ui_btnGoToDashboardScreen, 10, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_bg_color(ui_btnGoToDashboardScreen, lv_color_hex(0x4D4F5B), LV_PART_MAIN | LV_STATE_DEFAULT );
+lv_obj_set_style_bg_opa(ui_btnGoToDashboardScreen, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_outline_color(ui_btnGoToDashboardScreen, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT );
+lv_obj_set_style_outline_opa(ui_btnGoToDashboardScreen, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_Spinbox2 = lv_spinbox_create(ui_screentimer);
 lv_obj_set_width( ui_Spinbox2, 70);
@@ -268,7 +143,7 @@ lv_obj_set_x( ui_Spinbox2, -465 );
 lv_obj_set_y( ui_Spinbox2, 422 );
 lv_obj_set_align( ui_Spinbox2, LV_ALIGN_CENTER );
 lv_spinbox_set_digit_format( ui_Spinbox2, 4, 2);
-lv_spinbox_set_range( ui_Spinbox2, 0, 9999 );
+lv_spinbox_set_range( ui_Spinbox2, 0,9999 );
 lv_spinbox_set_cursor_pos(ui_Spinbox2, 1 - 1);
 
 ui_btnClearTimer = lv_btn_create(ui_screentimer);
@@ -301,11 +176,11 @@ lv_obj_set_height( ui_txtTimeRemaining, LV_SIZE_CONTENT);   /// 70
 lv_obj_set_x( ui_txtTimeRemaining, -228 );
 lv_obj_set_y( ui_txtTimeRemaining, -143 );
 lv_obj_set_align( ui_txtTimeRemaining, LV_ALIGN_CENTER );
-lv_textarea_set_max_length(ui_txtTimeRemaining, 6);
-lv_textarea_set_text(ui_txtTimeRemaining, "00:00");
-lv_textarea_set_one_line(ui_txtTimeRemaining, true);
+lv_textarea_set_max_length(ui_txtTimeRemaining,6);
+lv_textarea_set_text(ui_txtTimeRemaining,"00:00");
+lv_textarea_set_one_line(ui_txtTimeRemaining,true);
 lv_obj_set_style_text_font(ui_txtTimeRemaining, &ui_font_Big_Number, LV_PART_MAIN| LV_STATE_DEFAULT);
-lv_obj_set_style_outline_color(ui_txtTimeRemaining, TIMER_COLOR_STOPPED, LV_PART_MAIN | LV_STATE_DEFAULT );
+lv_obj_set_style_outline_color(ui_txtTimeRemaining, lv_color_hex(0xFF0000), LV_PART_MAIN | LV_STATE_DEFAULT );
 lv_obj_set_style_outline_opa(ui_txtTimeRemaining, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
 lv_obj_set_style_outline_width(ui_txtTimeRemaining, 10, LV_PART_MAIN| LV_STATE_DEFAULT);
 lv_obj_set_style_outline_pad(ui_txtTimeRemaining, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
@@ -328,9 +203,9 @@ lv_obj_set_height( ui_txtTimerStartValue, LV_SIZE_CONTENT);   /// 75
 lv_obj_set_x( ui_txtTimerStartValue, -133 );
 lv_obj_set_y( ui_txtTimerStartValue, 0 );
 lv_obj_set_align( ui_txtTimerStartValue, LV_ALIGN_CENTER );
-lv_textarea_set_max_length(ui_txtTimerStartValue, 4);
-lv_textarea_set_text(ui_txtTimerStartValue, "");
-lv_textarea_set_one_line(ui_txtTimerStartValue, true);
+lv_textarea_set_max_length(ui_txtTimerStartValue,4);
+lv_textarea_set_text(ui_txtTimerStartValue,"9999");
+lv_textarea_set_one_line(ui_txtTimerStartValue,true);
 lv_obj_set_style_text_color(ui_txtTimerStartValue, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT );
 lv_obj_set_style_text_opa(ui_txtTimerStartValue, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
 lv_obj_set_style_text_font(ui_txtTimerStartValue, &lv_font_montserrat_42, LV_PART_MAIN| LV_STATE_DEFAULT);
@@ -364,27 +239,29 @@ lv_obj_set_align( ui_Label2, LV_ALIGN_CENTER );
 lv_label_set_text(ui_Label2,"Seconds");
 lv_obj_set_style_text_font(ui_Label2, &lv_font_montserrat_20, LV_PART_MAIN| LV_STATE_DEFAULT);
 
-lv_keyboard_set_textarea(ui_kbNumberPad, ui_txtTimerStartValue);
+ui_btnGoToDebugScreen = lv_imgbtn_create(ui_screentimer);
+lv_imgbtn_set_src(ui_btnGoToDebugScreen, LV_IMGBTN_STATE_RELEASED, NULL, &ui_img_rt_arrow_png, NULL);
+lv_imgbtn_set_src(ui_btnGoToDebugScreen, LV_IMGBTN_STATE_PRESSED, NULL, &ui_img_rt_arrow_png, NULL);
+lv_obj_set_width( ui_btnGoToDebugScreen, 64);
+lv_obj_set_height( ui_btnGoToDebugScreen, 64);
+lv_obj_set_x( ui_btnGoToDebugScreen, -282 );
+lv_obj_set_y( ui_btnGoToDebugScreen, 195 );
+lv_obj_set_align( ui_btnGoToDebugScreen, LV_ALIGN_CENTER );
+lv_obj_set_style_radius(ui_btnGoToDebugScreen, 10, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_bg_color(ui_btnGoToDebugScreen, lv_color_hex(0x4D4F5B), LV_PART_MAIN | LV_STATE_DEFAULT );
+lv_obj_set_style_bg_opa(ui_btnGoToDebugScreen, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_outline_color(ui_btnGoToDebugScreen, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT );
+lv_obj_set_style_outline_opa(ui_btnGoToDebugScreen, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
 
-// Register event callbacks
-lv_obj_add_event_cb(ui_btnGoToTimers1, ui_event_btnGoToTimers1, LV_EVENT_ALL, NULL);
-lv_obj_add_event_cb(ui_kbNumberPad,    ui_event_kbNumberPad,    LV_EVENT_ALL, NULL);
-lv_obj_add_event_cb(ui_btnStartTimer,  ui_event_btnStartTimer,  LV_EVENT_ALL, NULL);
-lv_obj_add_event_cb(ui_btnStopTimer,   ui_event_btnStopTimer,   LV_EVENT_ALL, NULL);
-lv_obj_add_event_cb(ui_btnResetTimer,  ui_event_btnResetTimer,  LV_EVENT_ALL, NULL);
-lv_obj_add_event_cb(ui_btnClearTimer,  ui_event_btnClearTimer,  LV_EVENT_ALL, NULL);
+lv_keyboard_set_textarea(ui_kbNumberPad,ui_txtTimerStartValue);
+lv_obj_add_event_cb(ui_btnGoToDashboardScreen, ui_event_btnGoToDashboardScreen, LV_EVENT_ALL, NULL);
+lv_obj_add_event_cb(ui_btnGoToDebugScreen, ui_event_btnGoToDebugScreen, LV_EVENT_ALL, NULL);
 
-// Reset timer state on screen init
-timer_total_sec  = 0;
-timer_remain_sec = 0;
-countdown_hdl    = NULL;
 }
 
 void ui_screentimer_screen_destroy(void)
 {
-    stop_countdown();
-
-    if (ui_screentimer) lv_obj_del(ui_screentimer);
+   if (ui_screentimer) lv_obj_del(ui_screentimer);
 
 // NULL screen variables
 ui_screentimer= NULL;
@@ -396,7 +273,7 @@ ui_lblStop= NULL;
 ui_btnResetTimer= NULL;
 ui_lblReset= NULL;
 ui_barTimer= NULL;
-ui_btnGoToTimers1= NULL;
+ui_btnGoToDashboardScreen= NULL;
 ui_Spinbox2= NULL;
 ui_btnClearTimer= NULL;
 ui_lblClear= NULL;
@@ -406,4 +283,6 @@ ui_txtTimerStartValue= NULL;
 ui_swtModeMinOrSec= NULL;
 ui_Label3= NULL;
 ui_Label2= NULL;
+ui_btnGoToDebugScreen= NULL;
+
 }

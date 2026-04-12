@@ -22,8 +22,8 @@ extern lv_obj_t *ui_lblStop;
 extern lv_obj_t *ui_btnResetTimer;
 extern lv_obj_t *ui_lblReset;
 extern lv_obj_t *ui_barTimer;
-extern void ui_event_btnGoToTimers1( lv_event_t * e);
-extern lv_obj_t *ui_btnGoToTimers1;
+extern void ui_event_btnGoToDashboardScreen( lv_event_t * e);
+extern lv_obj_t *ui_btnGoToDashboardScreen;
 extern lv_obj_t *ui_Spinbox2;
 extern lv_obj_t *ui_btnClearTimer;
 extern lv_obj_t *ui_lblClear;
@@ -33,6 +33,8 @@ extern lv_obj_t *ui_txtTimerStartValue;
 extern lv_obj_t *ui_swtModeMinOrSec;
 extern lv_obj_t *ui_Label3;
 extern lv_obj_t *ui_Label2;
+extern void ui_event_btnGoToDebugScreen( lv_event_t * e);
+extern lv_obj_t *ui_btnGoToDebugScreen;
 // CUSTOM VARIABLES
 
 #ifdef __cplusplus
