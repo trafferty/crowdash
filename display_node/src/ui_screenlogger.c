@@ -28,7 +28,6 @@ lv_obj_set_height( ui_txtLogger, 455);
 lv_obj_set_x( ui_txtLogger, 35 );
 lv_obj_set_y( ui_txtLogger, -5 );
 lv_obj_set_align( ui_txtLogger, LV_ALIGN_CENTER );
-lv_textarea_set_text(ui_txtLogger,"line 1\nline 2");
 lv_obj_set_style_text_font(ui_txtLogger, &lv_font_montserrat_12, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_btnGoToTimerScreen2 = lv_imgbtn_create(ui_screenlogger);
