@@ -350,8 +350,7 @@ void loop() {
             char dateStr[32];
             int h = timeinfo.tm_hour, m = timeinfo.tm_min;
             int h12 = h % 12; if (h12 == 0) h12 = 12;
-            snprintf(timeStr, sizeof(timeStr), "%d:%02d%s",
-                     h12, m, (h < 12) ? "am" : "pm");
+            snprintf(timeStr, sizeof(timeStr), "%d:%02d", h12, m);
             strftime(dateStr, sizeof(dateStr), "%A, %b %d", &timeinfo);
             ui_update_time(timeStr, dateStr);
         }
