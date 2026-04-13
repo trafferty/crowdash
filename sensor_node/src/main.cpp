@@ -12,7 +12,7 @@
 #define version_str "2026_04_12: v2.4: Auto-DST via configTime POSIX TZ string, removed NTPClient dependency."
 
 // Uncomment to use mobile IP/hostname instead of porch
-#define MOBILE
+//#define MOBILE
 
 #ifdef MOBILE
     static const int  IP_last_field = DHT22_MOBILE_TEMP_SERVER_IP_LAST_FIELD;
