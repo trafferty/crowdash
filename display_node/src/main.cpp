@@ -133,6 +133,7 @@ const char* NTP_TZ     = "CST6CDT,M3.2.0,M11.1.0";
 const char* NTP_SERVER = "pool.ntp.org";
 static bool timeInitialized = false;
 static uint32_t lv_tick_prev = 0;
+static char garage_known_state[8] = "";  // last state set by an "event" message
 
 // Delay while keeping LVGL ticking so the display keeps updating.
 // Replaces bare delay() in blocking setup functions.
@@ -154,22 +155,35 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
     ui_log("MQTT [%s]: %s", topic, json);
 
-    // Handle garage door status
+    // Handle garage door messages
     if (strstr(topic, "garage")) {
         StaticJsonDocument<128> doc;
         DeserializationError err = deserializeJson(doc, json);
         if (err != DeserializationError::Ok) {
             ui_log("ERROR: garage JSON parse: %s", err.c_str());
-        } else {
-            const char* status = doc["event"];
-            const char* ts     = doc["ts"] | "";
-            if (status) {
-                ui_log("Garage: %s", status);
-                ui_update_garage_status(status);
-                if (*ts) ui_update_garage_time(ts);
-            } else {
-                ui_log("WARN: garage JSON missing 'event' field");
+            return;
+        }
+
+        const char* event_val  = doc["event"].as<const char*>();
+        const char* status_val = doc["status"].as<const char*>();
+        const char* ts         = doc["ts"] | "";
+
+        if (event_val) {
+            // State-change event — update display and timestamp
+            ui_log("Garage event: %s", event_val);
+            ui_update_garage_status(event_val);
+            if (*ts) ui_update_garage_time(ts);
+            strncpy(garage_known_state, event_val, sizeof(garage_known_state) - 1);
+            garage_known_state[sizeof(garage_known_state) - 1] = '\0';
+        } else if (status_val) {
+            // Periodic status poll — log and verify against known state
+            ui_log("Garage status: %s", status_val);
+            if (*garage_known_state && strcmp(garage_known_state, status_val) != 0) {
+                ui_log("WARN: garage mismatch (display=%s, polled=%s)",
+                       garage_known_state, status_val);
             }
+        } else {
+            ui_log("WARN: garage JSON has neither 'event' nor 'status' field");
         }
         return;
     }
