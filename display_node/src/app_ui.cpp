@@ -185,6 +185,7 @@ static void timer_btn_stop_cb(lv_event_t *e)
 {
     (void)e;
     if (timer_state == TIMER_RUNNING) timer_state = TIMER_PAUSED;
+    if (timer_state == TIMER_ALARM)  { audio_stop_alarm(); timer_state = TIMER_IDLE; }
 }
 
 static void timer_btn_reset_cb(lv_event_t *e)
@@ -200,6 +201,7 @@ static void timer_btn_reset_cb(lv_event_t *e)
 static void timer_btn_clear_cb(lv_event_t *e)
 {
     (void)e;
+    if (timer_state == TIMER_ALARM)  { audio_stop_alarm(); timer_state = TIMER_IDLE; }
     if (timer_state == TIMER_IDLE && ui_txtTimerStartValue)
         lv_textarea_set_text(ui_txtTimerStartValue, "");
 }
