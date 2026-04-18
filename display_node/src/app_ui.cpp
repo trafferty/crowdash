@@ -72,6 +72,7 @@ static void timer_btn_start_cb(lv_event_t *e);
 static void timer_btn_stop_cb(lv_event_t *e);
 static void timer_btn_reset_cb(lv_event_t *e);
 static void timer_btn_clear_cb(lv_event_t *e);
+static void timer_input_changed_cb(lv_event_t *e);
 
 // ============================================================
 // Gesture navigation
@@ -131,6 +132,10 @@ void ui_app_init(void)
     lv_obj_add_event_cb(ui_btnStopTimer,  timer_btn_stop_cb,  LV_EVENT_CLICKED, NULL);
     lv_obj_add_event_cb(ui_btnResetTimer, timer_btn_reset_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_add_event_cb(ui_btnClearTimer, timer_btn_clear_cb, LV_EVENT_CLICKED, NULL);
+
+    // Live-preview timer display while entering a value in IDLE state
+    lv_obj_add_event_cb(ui_txtTimerStartValue, timer_input_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
+    lv_obj_add_event_cb(ui_swtModeMinOrSec,    timer_input_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
 }
 
 // ============================================================
@@ -143,6 +148,22 @@ static timer_state_t timer_state    = TIMER_IDLE;
 static uint32_t      timer_remaining_ms = 0;
 static uint32_t      timer_start_ms    = 0;
 static uint32_t      timer_last_tick   = 0;
+
+static void keypad_set_enabled(bool en)
+{
+    if (ui_kbNumberPad) {
+        if (en) lv_obj_clear_state(ui_kbNumberPad, LV_STATE_DISABLED);
+        else    lv_obj_add_state(ui_kbNumberPad,   LV_STATE_DISABLED);
+    }
+    if (ui_swtModeMinOrSec) {
+        if (en) lv_obj_clear_state(ui_swtModeMinOrSec, LV_STATE_DISABLED);
+        else    lv_obj_add_state(ui_swtModeMinOrSec,   LV_STATE_DISABLED);
+    }
+    if (ui_txtTimerStartValue) {
+        if (en) lv_obj_clear_state(ui_txtTimerStartValue, LV_STATE_DISABLED);
+        else    lv_obj_add_state(ui_txtTimerStartValue,   LV_STATE_DISABLED);
+    }
+}
 
 static void timer_set_display(uint32_t ms)
 {
@@ -178,6 +199,7 @@ static void timer_btn_start_cb(lv_event_t *e)
     if (timer_state == TIMER_IDLE || timer_state == TIMER_PAUSED) {
         timer_state     = TIMER_RUNNING;
         timer_last_tick = millis();
+        keypad_set_enabled(false);
     }
 }
 
@@ -185,7 +207,7 @@ static void timer_btn_stop_cb(lv_event_t *e)
 {
     (void)e;
     if (timer_state == TIMER_RUNNING) timer_state = TIMER_PAUSED;
-    if (timer_state == TIMER_ALARM)  { audio_stop_alarm(); timer_state = TIMER_IDLE; }
+    if (timer_state == TIMER_ALARM)  { audio_stop_alarm(); timer_state = TIMER_IDLE; keypad_set_enabled(true); }
 }
 
 static void timer_btn_reset_cb(lv_event_t *e)
@@ -196,14 +218,27 @@ static void timer_btn_reset_cb(lv_event_t *e)
     timer_remaining_ms = 0;
     timer_set_display(0);
     if (ui_barTimer) lv_bar_set_value(ui_barTimer, 100, LV_ANIM_OFF);
+    keypad_set_enabled(true);
 }
 
 static void timer_btn_clear_cb(lv_event_t *e)
 {
     (void)e;
-    if (timer_state == TIMER_ALARM)  { audio_stop_alarm(); timer_state = TIMER_IDLE; }
+    if (timer_state == TIMER_ALARM)  { audio_stop_alarm(); timer_state = TIMER_IDLE; keypad_set_enabled(true); }
     if (timer_state == TIMER_IDLE && ui_txtTimerStartValue)
         lv_textarea_set_text(ui_txtTimerStartValue, "");
+}
+
+static void timer_input_changed_cb(lv_event_t *e)
+{
+    (void)e;
+    if (timer_state != TIMER_IDLE) return;
+    const char *txt = ui_txtTimerStartValue
+                      ? lv_textarea_get_text(ui_txtTimerStartValue) : "0";
+    int val = atoi(txt);
+    bool seconds_mode = ui_swtModeMinOrSec
+                        && lv_obj_has_state(ui_swtModeMinOrSec, LV_STATE_CHECKED);
+    timer_set_display((uint32_t)val * (seconds_mode ? 1000UL : 60000UL));
 }
 
 void ui_timer_tick(uint32_t now_ms)
