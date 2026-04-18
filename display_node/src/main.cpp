@@ -360,7 +360,7 @@ void loop() {
             int h = timeinfo.tm_hour, m = timeinfo.tm_min;
             int h12 = h % 12; if (h12 == 0) h12 = 12;
             snprintf(timeStr, sizeof(timeStr), "%d:%02d", h12, m);
-            strftime(dateStr, sizeof(dateStr), "%A, %b %d", &timeinfo);
+            strftime(dateStr, sizeof(dateStr), "%a, %b %d", &timeinfo);
             ui_update_time(timeStr, dateStr);
         }
     }
