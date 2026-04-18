@@ -10,6 +10,7 @@
 #include <time.h>
 #include "credentials.h"
 #include "app_ui.h"
+#include "audio.h"
 
 // ============================================================
 // LovyanGFX display driver (from CrowPanel example)
@@ -280,6 +281,14 @@ void setup() {
     pinMode(38, OUTPUT);
     digitalWrite(38, LOW);
 
+    // Audio must be initialised BEFORE lcd.begin().
+    // i2s_driver_install() allocates a GDMA channel; if it runs while
+    // LCD_CAM DMA is already active the global GDMA arbiter is briefly
+    // disturbed, the display controller loses H-sync, and the corruption
+    // is permanent until a full reset.  Calling it first is safe: the
+    // audio task just sits idle until the alarm fires.
+    audio_init();
+
     // Init display
     lcd.begin();
     lcd.fillScreen(TFT_BLACK);
@@ -364,6 +373,9 @@ void loop() {
         connectMQTT();
     }
     mqttClient.loop();
+
+    ui_timer_tick(now);
+    audio_tick();
 
     lv_timer_handler();
     delay(5);

@@ -33,6 +33,9 @@ void ui_update_garage_time(const char* ts);        // ISO 8601 timestamp
 // Sensor timestamp (MQTT: crowpanel/outdoor "ts" field, ISO 8601)
 void ui_update_sensor_timestamp(const char* ts);
 
+// Timer countdown — call every loop() iteration with millis()
+void ui_timer_tick(uint32_t now_ms);
+
 // Legacy stub kept for backward compatibility with mqttCallback
 void ui_update_current(int sensorIdx, float temp, float humidity);
 

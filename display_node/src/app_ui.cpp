@@ -4,6 +4,7 @@
 
 #include "ui.h"
 #include "app_ui.h"
+#include "audio.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <time.h>
@@ -66,6 +67,41 @@ static void fmt_12h(char* buf, size_t len, int hh, int mm)
     snprintf(buf, len, "%d:%02d%s", h12, mm, ampm);
 }
 
+// Forward declarations for timer button callbacks
+static void timer_btn_start_cb(lv_event_t *e);
+static void timer_btn_stop_cb(lv_event_t *e);
+static void timer_btn_reset_cb(lv_event_t *e);
+static void timer_btn_clear_cb(lv_event_t *e);
+
+// ============================================================
+// Gesture navigation
+// Screen order (left → right): Dashboard | Timer | Logger
+// Swipe LEFT advances right; swipe RIGHT goes back left.
+// ============================================================
+
+static void gesture_event_cb(lv_event_t *e)
+{
+    if (lv_event_get_code(e) != LV_EVENT_GESTURE) return;
+
+    lv_indev_t *indev = lv_indev_get_act();
+    lv_dir_t dir = lv_indev_get_gesture_dir(indev);
+    lv_obj_t *scr = lv_event_get_target(e);
+
+    if (scr == ui_screendashboard && dir == LV_DIR_LEFT) {
+        _ui_screen_change(&ui_screentimer, LV_SCR_LOAD_ANIM_MOVE_LEFT, 200, 0, &ui_screentimer_screen_init);
+    } else if (scr == ui_screentimer && dir == LV_DIR_RIGHT) {
+        _ui_screen_change(&ui_screendashboard, LV_SCR_LOAD_ANIM_MOVE_RIGHT, 200, 0, &ui_screendashboard_screen_init);
+    } else if (scr == ui_screentimer && dir == LV_DIR_LEFT) {
+        _ui_screen_change(&ui_screenlogger, LV_SCR_LOAD_ANIM_MOVE_LEFT, 200, 0, &ui_screenlogger_screen_init);
+    } else if (scr == ui_screenlogger && dir == LV_DIR_RIGHT) {
+        _ui_screen_change(&ui_screentimer, LV_SCR_LOAD_ANIM_MOVE_RIGHT, 200, 0, &ui_screentimer_screen_init);
+    } else {
+        return;
+    }
+
+    lv_indev_wait_release(indev);
+}
+
 void ui_app_init(void)
 {
     // Initialize data arrays to "no data"
@@ -85,7 +121,109 @@ void ui_app_init(void)
     lv_chart_refresh(ui_chtTemp);
     lv_chart_refresh(ui_chtHumidity);
 
+    // Register swipe-to-navigate on all three screens
+    lv_obj_add_event_cb(ui_screendashboard, gesture_event_cb, LV_EVENT_GESTURE, NULL);
+    lv_obj_add_event_cb(ui_screentimer,     gesture_event_cb, LV_EVENT_GESTURE, NULL);
+    lv_obj_add_event_cb(ui_screenlogger,    gesture_event_cb, LV_EVENT_GESTURE, NULL);
 
+    // Wire timer screen buttons
+    lv_obj_add_event_cb(ui_btnStartTimer, timer_btn_start_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_add_event_cb(ui_btnStopTimer,  timer_btn_stop_cb,  LV_EVENT_CLICKED, NULL);
+    lv_obj_add_event_cb(ui_btnResetTimer, timer_btn_reset_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_add_event_cb(ui_btnClearTimer, timer_btn_clear_cb, LV_EVENT_CLICKED, NULL);
+}
+
+// ============================================================
+// Timer state machine
+// ============================================================
+
+typedef enum { TIMER_IDLE, TIMER_RUNNING, TIMER_PAUSED, TIMER_ALARM } timer_state_t;
+
+static timer_state_t timer_state    = TIMER_IDLE;
+static uint32_t      timer_remaining_ms = 0;
+static uint32_t      timer_start_ms    = 0;
+static uint32_t      timer_last_tick   = 0;
+
+static void timer_set_display(uint32_t ms)
+{
+    uint32_t secs = ms / 1000;
+    char buf[8];
+    snprintf(buf, sizeof(buf), "%02lu:%02lu", secs / 60, secs % 60);
+    if (ui_txtTimeRemaining) lv_textarea_set_text(ui_txtTimeRemaining, buf);
+}
+
+static void timer_on_expired(void)
+{
+    timer_state = TIMER_ALARM;
+    timer_set_display(0);
+    if (ui_barTimer) lv_bar_set_value(ui_barTimer, 0, LV_ANIM_OFF);
+    audio_start_alarm();
+}
+
+static void timer_btn_start_cb(lv_event_t *e)
+{
+    (void)e;
+    if (timer_state == TIMER_IDLE) {
+        const char *txt = ui_txtTimerStartValue
+                          ? lv_textarea_get_text(ui_txtTimerStartValue) : "0";
+        int val = atoi(txt);
+        if (val <= 0) return;
+        bool seconds_mode = ui_swtModeMinOrSec
+                            && lv_obj_has_state(ui_swtModeMinOrSec, LV_STATE_CHECKED);
+        timer_start_ms     = (uint32_t)val * (seconds_mode ? 1000UL : 60000UL);
+        timer_remaining_ms = timer_start_ms;
+        if (ui_barTimer) lv_bar_set_value(ui_barTimer, 100, LV_ANIM_OFF);
+        timer_set_display(timer_remaining_ms);
+    }
+    if (timer_state == TIMER_IDLE || timer_state == TIMER_PAUSED) {
+        timer_state     = TIMER_RUNNING;
+        timer_last_tick = millis();
+    }
+}
+
+static void timer_btn_stop_cb(lv_event_t *e)
+{
+    (void)e;
+    if (timer_state == TIMER_RUNNING) timer_state = TIMER_PAUSED;
+}
+
+static void timer_btn_reset_cb(lv_event_t *e)
+{
+    (void)e;
+    audio_stop_alarm();
+    timer_state        = TIMER_IDLE;
+    timer_remaining_ms = 0;
+    timer_set_display(0);
+    if (ui_barTimer) lv_bar_set_value(ui_barTimer, 100, LV_ANIM_OFF);
+}
+
+static void timer_btn_clear_cb(lv_event_t *e)
+{
+    (void)e;
+    if (timer_state == TIMER_IDLE && ui_txtTimerStartValue)
+        lv_textarea_set_text(ui_txtTimerStartValue, "");
+}
+
+void ui_timer_tick(uint32_t now_ms)
+{
+    if (timer_state != TIMER_RUNNING) return;
+
+    uint32_t elapsed = now_ms - timer_last_tick;
+    timer_last_tick  = now_ms;
+
+    if (elapsed >= timer_remaining_ms) {
+        timer_remaining_ms = 0;
+        timer_on_expired();
+        return;
+    }
+
+    timer_remaining_ms -= elapsed;
+    timer_set_display(timer_remaining_ms);
+
+    if (ui_barTimer && timer_start_ms > 0) {
+        int32_t pct = (int32_t)((uint64_t)timer_remaining_ms * 100 / timer_start_ms);
+        lv_bar_set_value(ui_barTimer, pct, LV_ANIM_OFF);
+    }
 }
 
 // ============================================================
