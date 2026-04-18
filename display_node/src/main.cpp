@@ -177,12 +177,12 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
             strncpy(garage_known_state, event_val, sizeof(garage_known_state) - 1);
             garage_known_state[sizeof(garage_known_state) - 1] = '\0';
         } else if (status_val) {
-            // Periodic status poll — log and verify against known state
+            // Periodic status poll — update display and sync known state
             ui_log("Garage status: %s", status_val);
-            if (*garage_known_state && strcmp(garage_known_state, status_val) != 0) {
-                ui_log("WARN: garage mismatch (display=%s, polled=%s)",
-                       garage_known_state, status_val);
-            }
+            ui_update_garage_status(status_val);
+            if (*ts) ui_update_garage_time(ts);
+            strncpy(garage_known_state, status_val, sizeof(garage_known_state) - 1);
+            garage_known_state[sizeof(garage_known_state) - 1] = '\0';
         } else {
             ui_log("WARN: garage JSON has neither 'event' nor 'status' field");
         }
