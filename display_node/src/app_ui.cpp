@@ -287,12 +287,14 @@ void ui_timer_tick(uint32_t now_ms)
 // Schedule state machine
 // ============================================================
 
-static int  sched_sleep_h    = 22;   // default 10:00 PM
-static int  sched_sleep_m    = 0;
-static int  sched_wake_h     = 7;    // default 7:00 AM
-static int  sched_wake_m     = 0;
-static bool schedule_enabled = false;
-static bool display_is_on    = true;
+static int      sched_sleep_h       = 22;   // default 10:00 PM
+static int      sched_sleep_m       = 0;
+static int      sched_wake_h        = 7;    // default 7:00 AM
+static int      sched_wake_m        = 0;
+static bool     schedule_enabled    = false;
+static bool     display_is_on       = true;
+static uint32_t touch_wake_until_ms = 0;    // non-zero while touch-woken
+#define TOUCH_WAKE_MS 60000UL
 
 static void schedule_sleep_ta_cb(lv_event_t *e)
 {
@@ -350,17 +352,23 @@ static void schedule_save_cb(lv_event_t *e)
            sh, sm, wh, wm, schedule_enabled ? "yes" : "no");
 }
 
-void ui_schedule_tick(struct tm *t)
+bool ui_sleep_intercept_touch(void)
 {
-    if (!t || !schedule_enabled) return;
+    if (display_is_on) return false;
+    ledcWrite(1, 255);
+    display_is_on       = true;
+    touch_wake_until_ms = millis() + TOUCH_WAKE_MS;
+    ui_log("Schedule: touch woke display (60s)");
+    return true;
+}
 
-    int now_min   = t->tm_hour * 60 + t->tm_min;
+// Shared helper — evaluate schedule against current time and drive backlight.
+static void schedule_apply(int cur_hour, int cur_min)
+{
+    int now_min   = cur_hour * 60 + cur_min;
     int sleep_min = sched_sleep_h * 60 + sched_sleep_m;
     int wake_min  = sched_wake_h  * 60 + sched_wake_m;
 
-    // Midnight-wrap-aware window check.
-    // sleep < wake → same-day window (e.g., 02:00–06:00 for an unusual daytime nap).
-    // sleep >= wake → overnight window (e.g., 22:00–07:00).
     bool in_sleep;
     if (sleep_min < wake_min)
         in_sleep = (now_min >= sleep_min) && (now_min < wake_min);
@@ -370,12 +378,28 @@ void ui_schedule_tick(struct tm *t)
     if (in_sleep && display_is_on) {
         ledcWrite(1, 0);
         display_is_on = false;
-        ui_log("Schedule: display off (%02d:%02d)", t->tm_hour, t->tm_min);
+        ui_log("Schedule: display off (%02d:%02d)", cur_hour, cur_min);
     } else if (!in_sleep && !display_is_on) {
         ledcWrite(1, 255);
         display_is_on = true;
-        ui_log("Schedule: display on (%02d:%02d)", t->tm_hour, t->tm_min);
+        ui_log("Schedule: display on (%02d:%02d)", cur_hour, cur_min);
     }
+}
+
+void ui_schedule_check(uint32_t now_ms)
+{
+    if (!schedule_enabled || touch_wake_until_ms == 0) return;
+    if (now_ms < touch_wake_until_ms) return;
+    touch_wake_until_ms = 0;
+    struct tm t;
+    if (getLocalTime(&t, 0)) schedule_apply(t.tm_hour, t.tm_min);
+}
+
+void ui_schedule_tick(struct tm *t)
+{
+    if (!t || !schedule_enabled) return;
+    if (touch_wake_until_ms != 0) return;  // touch-wake in progress; check handled by ui_schedule_check
+    schedule_apply(t->tm_hour, t->tm_min);
 }
 
 // ============================================================

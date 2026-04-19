@@ -39,6 +39,14 @@ void ui_timer_tick(uint32_t now_ms);
 // Display sleep/wake schedule — call once per minute from loop() when timeInitialized
 void ui_schedule_tick(struct tm *t);
 
+// Call every loop() iteration — handles touch-wake expiry precisely
+void ui_schedule_check(uint32_t now_ms);
+
+// Call from my_touchpad_read when a touch is detected.
+// If the display is sleeping, wakes it for 60 s and returns true (caller
+// should suppress the touch event). Returns false when display is already on.
+bool ui_sleep_intercept_touch(void);
+
 // Legacy stub kept for backward compatibility with mqttCallback
 void ui_update_current(int sensorIdx, float temp, float humidity);
 

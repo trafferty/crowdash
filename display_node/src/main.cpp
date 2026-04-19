@@ -108,9 +108,13 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
 {
     if (touch_has_signal()) {
         if (touch_touched()) {
-            data->state = LV_INDEV_STATE_PR;
-            data->point.x = touch_last_x;
-            data->point.y = touch_last_y;
+            if (ui_sleep_intercept_touch()) {
+                data->state = LV_INDEV_STATE_REL;  // swallow touch — display was sleeping
+            } else {
+                data->state = LV_INDEV_STATE_PR;
+                data->point.x = touch_last_x;
+                data->point.y = touch_last_y;
+            }
         } else if (touch_released()) {
             data->state = LV_INDEV_STATE_REL;
         }
@@ -386,6 +390,7 @@ void loop() {
     mqttClient.loop();
 
     ui_timer_tick(now);
+    ui_schedule_check(now);
     audio_tick();
 
     lv_timer_handler();
