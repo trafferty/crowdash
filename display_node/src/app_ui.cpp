@@ -122,6 +122,11 @@ void ui_app_init(void)
     lv_chart_refresh(ui_chtTemp);
     lv_chart_refresh(ui_chtHumidity);
 
+    // Dim time/date labels until NTP syncs
+    lv_color_t pre_ntp = lv_color_hex(0x555555);
+    if (ui_lblTimeOfDay) lv_obj_set_style_text_color(ui_lblTimeOfDay, pre_ntp, LV_PART_MAIN | LV_STATE_DEFAULT);
+    if (ui_lblDate)      lv_obj_set_style_text_color(ui_lblDate,      pre_ntp, LV_PART_MAIN | LV_STATE_DEFAULT);
+
     // Register swipe-to-navigate on all three screens
     lv_obj_add_event_cb(ui_screendashboard, gesture_event_cb, LV_EVENT_GESTURE, NULL);
     lv_obj_add_event_cb(ui_screentimer,     gesture_event_cb, LV_EVENT_GESTURE, NULL);
@@ -268,6 +273,13 @@ void ui_timer_tick(uint32_t now_ms)
 // ============================================================
 void ui_update_time(const char* time_str, const char* date_str)
 {
+    static bool ntp_color_set = false;
+    if (!ntp_color_set) {
+        lv_color_t white = lv_color_hex(0xFFFFFF);
+        if (ui_lblTimeOfDay) lv_obj_set_style_text_color(ui_lblTimeOfDay, white, LV_PART_MAIN | LV_STATE_DEFAULT);
+        if (ui_lblDate)      lv_obj_set_style_text_color(ui_lblDate,      white, LV_PART_MAIN | LV_STATE_DEFAULT);
+        ntp_color_set = true;
+    }
     if (ui_lblTimeOfDay) lv_label_set_text(ui_lblTimeOfDay, time_str);
     if (ui_lblDate)      lv_label_set_text(ui_lblDate,      date_str);
 }
