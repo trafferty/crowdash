@@ -74,6 +74,11 @@ static void timer_btn_reset_cb(lv_event_t *e);
 static void timer_btn_clear_cb(lv_event_t *e);
 static void timer_input_changed_cb(lv_event_t *e);
 
+// Forward declarations for schedule callbacks
+static void schedule_save_cb(lv_event_t *e);
+static void schedule_sleep_ta_cb(lv_event_t *e);
+static void schedule_wake_ta_cb(lv_event_t *e);
+
 // ============================================================
 // Gesture navigation
 // Screen order (left → right): Dashboard | Timer | Logger
@@ -95,7 +100,11 @@ static void gesture_event_cb(lv_event_t *e)
     } else if (scr == ui_screentimer && dir == LV_DIR_LEFT) {
         _ui_screen_change(&ui_screenlogger, LV_SCR_LOAD_ANIM_MOVE_LEFT, 200, 0, &ui_screenlogger_screen_init);
     } else if (scr == ui_screenlogger && dir == LV_DIR_RIGHT) {
-        _ui_screen_change(&ui_screentimer, LV_SCR_LOAD_ANIM_MOVE_RIGHT, 200, 0, &ui_screentimer_screen_init);
+        _ui_screen_change(&ui_screentimer,    LV_SCR_LOAD_ANIM_MOVE_RIGHT, 200, 0, &ui_screentimer_screen_init);
+    } else if (scr == ui_screenlogger && dir == LV_DIR_LEFT) {
+        _ui_screen_change(&ui_screenschedule, LV_SCR_LOAD_ANIM_MOVE_LEFT,  200, 0, &ui_screenschedule_screen_init);
+    } else if (scr == ui_screenschedule && dir == LV_DIR_RIGHT) {
+        _ui_screen_change(&ui_screenlogger,   LV_SCR_LOAD_ANIM_MOVE_RIGHT, 200, 0, &ui_screenlogger_screen_init);
     } else {
         return;
     }
@@ -141,6 +150,12 @@ void ui_app_init(void)
     // Live-preview timer display while entering a value in IDLE state
     lv_obj_add_event_cb(ui_txtTimerStartValue, timer_input_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
     lv_obj_add_event_cb(ui_swtModeMinOrSec,    timer_input_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
+
+    // Schedule screen
+    lv_obj_add_event_cb(ui_screenschedule,  gesture_event_cb,     LV_EVENT_GESTURE, NULL);
+    lv_obj_add_event_cb(ui_txtSleepTime,    schedule_sleep_ta_cb, LV_EVENT_CLICKED,  NULL);
+    lv_obj_add_event_cb(ui_txtWakeTime,     schedule_wake_ta_cb,  LV_EVENT_CLICKED,  NULL);
+    lv_obj_add_event_cb(ui_btnSaveSchedule, schedule_save_cb,     LV_EVENT_CLICKED,  NULL);
 }
 
 // ============================================================
@@ -265,6 +280,101 @@ void ui_timer_tick(uint32_t now_ms)
     if (ui_barTimer && timer_start_ms > 0) {
         int32_t pct = (int32_t)((uint64_t)timer_remaining_ms * 100 / timer_start_ms);
         lv_bar_set_value(ui_barTimer, pct, LV_ANIM_OFF);
+    }
+}
+
+// ============================================================
+// Schedule state machine
+// ============================================================
+
+static int  sched_sleep_h    = 22;   // default 10:00 PM
+static int  sched_sleep_m    = 0;
+static int  sched_wake_h     = 7;    // default 7:00 AM
+static int  sched_wake_m     = 0;
+static bool schedule_enabled = false;
+static bool display_is_on    = true;
+
+static void schedule_sleep_ta_cb(lv_event_t *e)
+{
+    (void)e;
+    if (ui_kbSchedule && ui_txtSleepTime)
+        lv_keyboard_set_textarea(ui_kbSchedule, ui_txtSleepTime);
+}
+
+static void schedule_wake_ta_cb(lv_event_t *e)
+{
+    (void)e;
+    if (ui_kbSchedule && ui_txtWakeTime)
+        lv_keyboard_set_textarea(ui_kbSchedule, ui_txtWakeTime);
+}
+
+// Parses a 4-digit HHMM textarea + AM/PM switch into 24-hour h/m.
+// Hour range: 1–12; minute range: 0–59. Returns false on bad input.
+static bool parse_hhmm(lv_obj_t *ta, lv_obj_t *ampm_swt, int *out_h, int *out_m)
+{
+    if (!ta) return false;
+    const char *txt = lv_textarea_get_text(ta);
+    if (!txt || strlen(txt) != 4) return false;
+    for (int i = 0; i < 4; i++) {
+        if (txt[i] < '0' || txt[i] > '9') return false;
+    }
+    int hh = (txt[0] - '0') * 10 + (txt[1] - '0');
+    int mm = (txt[2] - '0') * 10 + (txt[3] - '0');
+    if (hh < 1 || hh > 12) return false;
+    if (mm > 59) return false;
+    bool is_pm = ampm_swt && lv_obj_has_state(ampm_swt, LV_STATE_CHECKED);
+    if (hh == 12) hh = 0;   // 12:xx → 0 before applying PM offset
+    if (is_pm)    hh += 12; // 0+12=12 (noon), 1..11+12=13..23
+    *out_h = hh;
+    *out_m = mm;
+    return true;
+}
+
+static void schedule_save_cb(lv_event_t *e)
+{
+    (void)e;
+    int sh, sm, wh, wm;
+    bool sleep_ok = parse_hhmm(ui_txtSleepTime, ui_swtSleepAmPm, &sh, &sm);
+    bool wake_ok  = parse_hhmm(ui_txtWakeTime,  ui_swtWakeAmPm,  &wh, &wm);
+    if (!sleep_ok || !wake_ok) {
+        ui_log("Schedule: invalid time — enter 4 digits (HHMM), hour 01-12");
+        return;
+    }
+    sched_sleep_h    = sh;
+    sched_sleep_m    = sm;
+    sched_wake_h     = wh;
+    sched_wake_m     = wm;
+    schedule_enabled = ui_swtScheduleEnable
+                       && lv_obj_has_state(ui_swtScheduleEnable, LV_STATE_CHECKED);
+    ui_log("Schedule: sleep=%02d:%02d  wake=%02d:%02d  enabled=%s",
+           sh, sm, wh, wm, schedule_enabled ? "yes" : "no");
+}
+
+void ui_schedule_tick(struct tm *t)
+{
+    if (!t || !schedule_enabled) return;
+
+    int now_min   = t->tm_hour * 60 + t->tm_min;
+    int sleep_min = sched_sleep_h * 60 + sched_sleep_m;
+    int wake_min  = sched_wake_h  * 60 + sched_wake_m;
+
+    // Midnight-wrap-aware window check.
+    // sleep < wake → same-day window (e.g., 02:00–06:00 for an unusual daytime nap).
+    // sleep >= wake → overnight window (e.g., 22:00–07:00).
+    bool in_sleep;
+    if (sleep_min < wake_min)
+        in_sleep = (now_min >= sleep_min) && (now_min < wake_min);
+    else
+        in_sleep = (now_min >= sleep_min) || (now_min < wake_min);
+
+    if (in_sleep && display_is_on) {
+        ledcWrite(1, 0);
+        display_is_on = false;
+        ui_log("Schedule: display off (%02d:%02d)", t->tm_hour, t->tm_min);
+    } else if (!in_sleep && !display_is_on) {
+        ledcWrite(1, 255);
+        display_is_on = true;
+        ui_log("Schedule: display on (%02d:%02d)", t->tm_hour, t->tm_min);
     }
 }
 

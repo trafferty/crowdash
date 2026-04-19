@@ -29,6 +29,7 @@ extern "C" {
 #include "ui_screendashboard.h"
 #include "ui_screentimer.h"
 #include "ui_screenlogger.h"
+#include "ui_screenschedule.h"
 
 ///////////////////// VARIABLES ////////////////////
 

@@ -36,6 +36,9 @@ void ui_update_sensor_timestamp(const char* ts);
 // Timer countdown — call every loop() iteration with millis()
 void ui_timer_tick(uint32_t now_ms);
 
+// Display sleep/wake schedule — call once per minute from loop() when timeInitialized
+void ui_schedule_tick(struct tm *t);
+
 // Legacy stub kept for backward compatibility with mqttCallback
 void ui_update_current(int sensorIdx, float temp, float humidity);
 

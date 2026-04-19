@@ -35,6 +35,7 @@ lv_disp_set_theme(dispp, theme);
 ui_screendashboard_screen_init();
 ui_screentimer_screen_init();
 ui_screenlogger_screen_init();
+ui_screenschedule_screen_init();
 ui____initial_actions0 = lv_obj_create(NULL);
 lv_disp_load_scr( ui_screendashboard);
 }
@@ -43,4 +44,5 @@ void ui_destroy( void )
 {ui_screendashboard_screen_destroy();
 ui_screentimer_screen_destroy();
 ui_screenlogger_screen_destroy();
+ui_screenschedule_screen_destroy();
 }

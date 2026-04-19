@@ -365,6 +365,14 @@ void loop() {
         }
     }
 
+    // Schedule tick — once per minute
+    static unsigned long lastScheduleTick = 0;
+    if (timeInitialized && millis() - lastScheduleTick >= 60000UL) {
+        lastScheduleTick = millis();
+        struct tm sched_tm;
+        if (getLocalTime(&sched_tm)) ui_schedule_tick(&sched_tm);
+    }
+
     // Reconnect if needed
     if (WiFi.status() != WL_CONNECTED) {
         connectWiFi();
