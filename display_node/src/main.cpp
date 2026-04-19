@@ -369,6 +369,9 @@ void loop() {
     if (WiFi.status() != WL_CONNECTED) {
         connectWiFi();
     }
+    if (!timeInitialized && WiFi.status() == WL_CONNECTED) {
+        initNTP();
+    }
     if (!mqttClient.connected()) {
         connectMQTT();
     }
