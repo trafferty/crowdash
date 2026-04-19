@@ -9,6 +9,7 @@
 #include <stdarg.h>
 #include <time.h>
 #include <Arduino.h>
+#include <Preferences.h>
 
 // ============================================================
 // Logger
@@ -74,10 +75,13 @@ static void timer_btn_reset_cb(lv_event_t *e);
 static void timer_btn_clear_cb(lv_event_t *e);
 static void timer_input_changed_cb(lv_event_t *e);
 
-// Forward declarations for schedule callbacks
+// Forward declarations for schedule callbacks and helpers
 static void schedule_save_cb(lv_event_t *e);
 static void schedule_sleep_ta_cb(lv_event_t *e);
 static void schedule_wake_ta_cb(lv_event_t *e);
+static void schedule_prefs_load(void);
+static void schedule_prefs_save(void);
+static void schedule_apply_to_ui(void);
 
 // ============================================================
 // Gesture navigation
@@ -150,6 +154,10 @@ void ui_app_init(void)
     // Live-preview timer display while entering a value in IDLE state
     lv_obj_add_event_cb(ui_txtTimerStartValue, timer_input_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
     lv_obj_add_event_cb(ui_swtModeMinOrSec,    timer_input_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
+
+    // Load persisted schedule settings and push to widgets
+    schedule_prefs_load();
+    schedule_apply_to_ui();
 
     // Schedule screen
     lv_obj_add_event_cb(ui_screenschedule,  gesture_event_cb,     LV_EVENT_GESTURE, NULL);
@@ -296,6 +304,53 @@ static bool     display_is_on       = true;
 static uint32_t touch_wake_until_ms = 0;    // non-zero while touch-woken
 #define TOUCH_WAKE_MS 60000UL
 
+static void schedule_prefs_load(void)
+{
+    Preferences p;
+    if (!p.begin("schedule", true)) return;  // read-only; false if namespace doesn't exist yet
+    sched_sleep_h    = p.getInt("sleep_h",  22);
+    sched_sleep_m    = p.getInt("sleep_m",  0);
+    sched_wake_h     = p.getInt("wake_h",   7);
+    sched_wake_m     = p.getInt("wake_m",   0);
+    schedule_enabled = p.getBool("enabled", false);
+    p.end();
+}
+
+static void schedule_prefs_save(void)
+{
+    Preferences p;
+    p.begin("schedule", false);
+    p.putInt("sleep_h",  sched_sleep_h);
+    p.putInt("sleep_m",  sched_sleep_m);
+    p.putInt("wake_h",   sched_wake_h);
+    p.putInt("wake_m",   sched_wake_m);
+    p.putBool("enabled", schedule_enabled);
+    p.end();
+}
+
+// Push current state vars back to the schedule screen widgets (24h → 12h HHMM).
+static void schedule_apply_to_ui(void)
+{
+    auto set_time = [](int h24, int m, lv_obj_t *ta, lv_obj_t *swt) {
+        bool pm = (h24 >= 12);
+        int h12 = h24 % 12;
+        if (h12 == 0) h12 = 12;
+        char buf[5];
+        snprintf(buf, sizeof(buf), "%02d%02d", h12, m);
+        if (ta) lv_textarea_set_text(ta, buf);
+        if (swt) {
+            if (pm) lv_obj_add_state(swt,  LV_STATE_CHECKED);
+            else    lv_obj_clear_state(swt, LV_STATE_CHECKED);
+        }
+    };
+    set_time(sched_sleep_h, sched_sleep_m, ui_txtSleepTime, ui_swtSleepAmPm);
+    set_time(sched_wake_h,  sched_wake_m,  ui_txtWakeTime,  ui_swtWakeAmPm);
+    if (ui_swtScheduleEnable) {
+        if (schedule_enabled) lv_obj_add_state(ui_swtScheduleEnable,  LV_STATE_CHECKED);
+        else                  lv_obj_clear_state(ui_swtScheduleEnable, LV_STATE_CHECKED);
+    }
+}
+
 static void schedule_sleep_ta_cb(lv_event_t *e)
 {
     (void)e;
@@ -348,6 +403,7 @@ static void schedule_save_cb(lv_event_t *e)
     sched_wake_m     = wm;
     schedule_enabled = ui_swtScheduleEnable
                        && lv_obj_has_state(ui_swtScheduleEnable, LV_STATE_CHECKED);
+    schedule_prefs_save();
     ui_log("Schedule: sleep=%02d:%02d  wake=%02d:%02d  enabled=%s",
            sh, sm, wh, wm, schedule_enabled ? "yes" : "no");
 }
