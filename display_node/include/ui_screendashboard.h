@@ -67,6 +67,7 @@ extern lv_obj_t *ui_lblIndoorHumidity;
 extern lv_obj_t *ui_lblTemp;
 extern lv_obj_t *ui_lblHumidity;
 extern lv_obj_t *ui_lblGarageTime;
+extern lv_obj_t *ui_lblCurrentDayHighLowTemp;
 // CUSTOM VARIABLES
 
 #ifdef __cplusplus

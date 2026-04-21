@@ -33,6 +33,9 @@ void ui_update_garage_time(const char* ts);        // ISO 8601 timestamp
 // Sensor timestamp (MQTT: crowpanel/outdoor "ts" field, ISO 8601)
 void ui_update_sensor_timestamp(const char* ts);
 
+// Weather forecast (Open-Meteo, fetched on startup and every 30 min)
+void ui_update_forecast(void);
+
 // Timer countdown — call every loop() iteration with millis()
 void ui_timer_tick(uint32_t now_ms);
 

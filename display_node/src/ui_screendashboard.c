@@ -5,7 +5,7 @@
 
 #include "ui.h"
 
-lv_obj_t *ui_screendashboard = NULL;lv_obj_t *ui_pnlTimeDate = NULL;lv_obj_t *ui_lblTimeOfDay = NULL;lv_obj_t *ui_lblDate = NULL;lv_obj_t *ui_pnlOutsideTemp = NULL;lv_obj_t *ui_chtTemp = NULL;lv_obj_t *ui_chtHumidity = NULL;lv_obj_t *ui_lblCurrentTemp = NULL;lv_obj_t *ui_lblCurrentHumidity = NULL;lv_obj_t *ui_pnlCurrentWeather = NULL;lv_obj_t *ui_imgCurrentWeather = NULL;lv_obj_t *ui_btnGoToTimerScreen = NULL;lv_obj_t *ui_pnlForecast = NULL;lv_obj_t *ui_pnlForecastD0 = NULL;lv_obj_t *ui_imgForecastD0 = NULL;lv_obj_t *ui_lblForecastTempD0 = NULL;lv_obj_t *ui_lblForecastDayD0 = NULL;lv_obj_t *ui_pnlForecastD1 = NULL;lv_obj_t *ui_imgForecastD1 = NULL;lv_obj_t *ui_lblForecastTempD1 = NULL;lv_obj_t *ui_lblForecastDayD1 = NULL;lv_obj_t *ui_pnlForecastD2 = NULL;lv_obj_t *ui_imgForecastD2 = NULL;lv_obj_t *ui_lblForecastTempD2 = NULL;lv_obj_t *ui_lblForecastDayD2 = NULL;lv_obj_t *ui_pnlForecastD3 = NULL;lv_obj_t *ui_imgForecastD3 = NULL;lv_obj_t *ui_lblForecastTempD3 = NULL;lv_obj_t *ui_lblForecastDayD3 = NULL;lv_obj_t *ui_pnlForecastD4 = NULL;lv_obj_t *ui_imgForecastD4 = NULL;lv_obj_t *ui_lblForecastTempD4 = NULL;lv_obj_t *ui_lblForecastDayD4 = NULL;lv_obj_t *ui_pnlStatus = NULL;lv_obj_t *ui_pnlGarageDoorStatus = NULL;lv_obj_t *ui_lblGarageDoor = NULL;lv_obj_t *ui_lblGarageDoorStatus = NULL;lv_obj_t *ui_pnlPlaceHolderStatus = NULL;lv_obj_t *ui_lblEvent1 = NULL;lv_obj_t *ui_lblEventStatus1 = NULL;lv_obj_t *ui_pnlCalEvents = NULL;lv_obj_t *ui_txtCalEvents = NULL;lv_obj_t *ui_pnlEnclosure = NULL;lv_obj_t *ui_Label9 = NULL;lv_obj_t *ui_lblEnclosureTemp = NULL;lv_obj_t *ui_lblEnclosureHumidity = NULL;lv_obj_t *ui_pnlIndoor = NULL;lv_obj_t *ui_Label1 = NULL;lv_obj_t *ui_lblIndoorTemp = NULL;lv_obj_t *ui_lblIndoorHumidity = NULL;lv_obj_t *ui_lblTemp = NULL;lv_obj_t *ui_lblHumidity = NULL;lv_obj_t *ui_lblGarageTime = NULL;
+lv_obj_t *ui_screendashboard = NULL;lv_obj_t *ui_pnlTimeDate = NULL;lv_obj_t *ui_lblTimeOfDay = NULL;lv_obj_t *ui_lblDate = NULL;lv_obj_t *ui_pnlOutsideTemp = NULL;lv_obj_t *ui_chtTemp = NULL;lv_obj_t *ui_chtHumidity = NULL;lv_obj_t *ui_lblCurrentTemp = NULL;lv_obj_t *ui_lblCurrentHumidity = NULL;lv_obj_t *ui_pnlCurrentWeather = NULL;lv_obj_t *ui_imgCurrentWeather = NULL;lv_obj_t *ui_btnGoToTimerScreen = NULL;lv_obj_t *ui_pnlForecast = NULL;lv_obj_t *ui_pnlForecastD0 = NULL;lv_obj_t *ui_imgForecastD0 = NULL;lv_obj_t *ui_lblForecastTempD0 = NULL;lv_obj_t *ui_lblForecastDayD0 = NULL;lv_obj_t *ui_pnlForecastD1 = NULL;lv_obj_t *ui_imgForecastD1 = NULL;lv_obj_t *ui_lblForecastTempD1 = NULL;lv_obj_t *ui_lblForecastDayD1 = NULL;lv_obj_t *ui_pnlForecastD2 = NULL;lv_obj_t *ui_imgForecastD2 = NULL;lv_obj_t *ui_lblForecastTempD2 = NULL;lv_obj_t *ui_lblForecastDayD2 = NULL;lv_obj_t *ui_pnlForecastD3 = NULL;lv_obj_t *ui_imgForecastD3 = NULL;lv_obj_t *ui_lblForecastTempD3 = NULL;lv_obj_t *ui_lblForecastDayD3 = NULL;lv_obj_t *ui_pnlForecastD4 = NULL;lv_obj_t *ui_imgForecastD4 = NULL;lv_obj_t *ui_lblForecastTempD4 = NULL;lv_obj_t *ui_lblForecastDayD4 = NULL;lv_obj_t *ui_pnlStatus = NULL;lv_obj_t *ui_pnlGarageDoorStatus = NULL;lv_obj_t *ui_lblGarageDoor = NULL;lv_obj_t *ui_lblGarageDoorStatus = NULL;lv_obj_t *ui_pnlPlaceHolderStatus = NULL;lv_obj_t *ui_lblEvent1 = NULL;lv_obj_t *ui_lblEventStatus1 = NULL;lv_obj_t *ui_pnlCalEvents = NULL;lv_obj_t *ui_txtCalEvents = NULL;lv_obj_t *ui_pnlEnclosure = NULL;lv_obj_t *ui_Label9 = NULL;lv_obj_t *ui_lblEnclosureTemp = NULL;lv_obj_t *ui_lblEnclosureHumidity = NULL;lv_obj_t *ui_pnlIndoor = NULL;lv_obj_t *ui_Label1 = NULL;lv_obj_t *ui_lblIndoorTemp = NULL;lv_obj_t *ui_lblIndoorHumidity = NULL;lv_obj_t *ui_lblTemp = NULL;lv_obj_t *ui_lblHumidity = NULL;lv_obj_t *ui_lblGarageTime = NULL;lv_obj_t *ui_lblCurrentDayHighLowTemp = NULL;
 // event funtions
 void ui_event_btnGoToTimerScreen( lv_event_t * e) {
     lv_event_code_t event_code = lv_event_get_code(e);
@@ -111,7 +111,7 @@ ui_lblCurrentTemp = lv_label_create(ui_pnlOutsideTemp);
 lv_obj_set_width( ui_lblCurrentTemp, LV_SIZE_CONTENT);  /// 1
 lv_obj_set_height( ui_lblCurrentTemp, LV_SIZE_CONTENT);   /// 1
 lv_obj_set_x( ui_lblCurrentTemp, -198 );
-lv_obj_set_y( ui_lblCurrentTemp, -21 );
+lv_obj_set_y( ui_lblCurrentTemp, -27 );
 lv_obj_set_align( ui_lblCurrentTemp, LV_ALIGN_CENTER );
 lv_label_set_text(ui_lblCurrentTemp,"100 F");
 lv_obj_set_style_text_font(ui_lblCurrentTemp, &lv_font_montserrat_48, LV_PART_MAIN| LV_STATE_DEFAULT);
@@ -120,7 +120,7 @@ ui_lblCurrentHumidity = lv_label_create(ui_pnlOutsideTemp);
 lv_obj_set_width( ui_lblCurrentHumidity, LV_SIZE_CONTENT);  /// 1
 lv_obj_set_height( ui_lblCurrentHumidity, LV_SIZE_CONTENT);   /// 1
 lv_obj_set_x( ui_lblCurrentHumidity, -196 );
-lv_obj_set_y( ui_lblCurrentHumidity, 27 );
+lv_obj_set_y( ui_lblCurrentHumidity, 15 );
 lv_obj_set_align( ui_lblCurrentHumidity, LV_ALIGN_CENTER );
 lv_label_set_text(ui_lblCurrentHumidity,"78%");
 lv_obj_set_style_text_font(ui_lblCurrentHumidity, &lv_font_montserrat_32, LV_PART_MAIN| LV_STATE_DEFAULT);
@@ -206,6 +206,7 @@ lv_obj_set_x( ui_lblForecastDayD0, -1 );
 lv_obj_set_y( ui_lblForecastDayD0, -45 );
 lv_obj_set_align( ui_lblForecastDayD0, LV_ALIGN_CENTER );
 lv_label_set_text(ui_lblForecastDayD0,"Today");
+lv_obj_set_style_text_font(ui_lblForecastDayD0, &lv_font_montserrat_12, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_pnlForecastD1 = lv_obj_create(ui_pnlForecast);
 lv_obj_set_width( ui_pnlForecastD1, 96);
@@ -244,6 +245,7 @@ lv_obj_set_x( ui_lblForecastDayD1, -1 );
 lv_obj_set_y( ui_lblForecastDayD1, -45 );
 lv_obj_set_align( ui_lblForecastDayD1, LV_ALIGN_CENTER );
 lv_label_set_text(ui_lblForecastDayD1,"Today");
+lv_obj_set_style_text_font(ui_lblForecastDayD1, &lv_font_montserrat_12, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_pnlForecastD2 = lv_obj_create(ui_pnlForecast);
 lv_obj_set_width( ui_pnlForecastD2, 96);
@@ -281,7 +283,8 @@ lv_obj_set_height( ui_lblForecastDayD2, LV_SIZE_CONTENT);   /// 1
 lv_obj_set_x( ui_lblForecastDayD2, -1 );
 lv_obj_set_y( ui_lblForecastDayD2, -45 );
 lv_obj_set_align( ui_lblForecastDayD2, LV_ALIGN_CENTER );
-lv_label_set_text(ui_lblForecastDayD2,"Today");
+lv_label_set_text(ui_lblForecastDayD2,"Wed, Apr 12");
+lv_obj_set_style_text_font(ui_lblForecastDayD2, &lv_font_montserrat_12, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_pnlForecastD3 = lv_obj_create(ui_pnlForecast);
 lv_obj_set_width( ui_pnlForecastD3, 96);
@@ -320,6 +323,7 @@ lv_obj_set_x( ui_lblForecastDayD3, -1 );
 lv_obj_set_y( ui_lblForecastDayD3, -45 );
 lv_obj_set_align( ui_lblForecastDayD3, LV_ALIGN_CENTER );
 lv_label_set_text(ui_lblForecastDayD3,"Today");
+lv_obj_set_style_text_font(ui_lblForecastDayD3, &lv_font_montserrat_12, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_pnlForecastD4 = lv_obj_create(ui_pnlForecast);
 lv_obj_set_width( ui_pnlForecastD4, 96);
@@ -358,6 +362,7 @@ lv_obj_set_x( ui_lblForecastDayD4, -1 );
 lv_obj_set_y( ui_lblForecastDayD4, -45 );
 lv_obj_set_align( ui_lblForecastDayD4, LV_ALIGN_CENTER );
 lv_label_set_text(ui_lblForecastDayD4,"Today");
+lv_obj_set_style_text_font(ui_lblForecastDayD4, &lv_font_montserrat_12, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_pnlStatus = lv_obj_create(ui_screendashboard);
 lv_obj_set_width( ui_pnlStatus, 217);
@@ -556,6 +561,15 @@ lv_obj_set_align( ui_lblGarageTime, LV_ALIGN_CENTER );
 lv_label_set_text(ui_lblGarageTime,"4/05/26 - 12:34p");
 lv_obj_set_style_text_font(ui_lblGarageTime, &lv_font_montserrat_12, LV_PART_MAIN| LV_STATE_DEFAULT);
 
+ui_lblCurrentDayHighLowTemp = lv_label_create(ui_screendashboard);
+lv_obj_set_width( ui_lblCurrentDayHighLowTemp, LV_SIZE_CONTENT);  /// 1
+lv_obj_set_height( ui_lblCurrentDayHighLowTemp, LV_SIZE_CONTENT);   /// 1
+lv_obj_set_x( ui_lblCurrentDayHighLowTemp, -86 );
+lv_obj_set_y( ui_lblCurrentDayHighLowTemp, -122 );
+lv_obj_set_align( ui_lblCurrentDayHighLowTemp, LV_ALIGN_CENTER );
+lv_label_set_text(ui_lblCurrentDayHighLowTemp,"100  |  100");
+lv_obj_set_style_text_font(ui_lblCurrentDayHighLowTemp, &lv_font_montserrat_18, LV_PART_MAIN| LV_STATE_DEFAULT);
+
 lv_obj_add_event_cb(ui_btnGoToTimerScreen, ui_event_btnGoToTimerScreen, LV_EVENT_ALL, NULL);
 
 }
@@ -618,5 +632,6 @@ ui_lblIndoorHumidity= NULL;
 ui_lblTemp= NULL;
 ui_lblHumidity= NULL;
 ui_lblGarageTime= NULL;
+ui_lblCurrentDayHighLowTemp= NULL;
 
 }

@@ -10,6 +10,8 @@
 #include <time.h>
 #include <Arduino.h>
 #include <Preferences.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
 
 // ============================================================
 // Logger
@@ -77,11 +79,16 @@ static void timer_input_changed_cb(lv_event_t *e);
 
 // Forward declarations for schedule callbacks and helpers
 static void schedule_save_cb(lv_event_t *e);
-static void schedule_sleep_ta_cb(lv_event_t *e);
-static void schedule_wake_ta_cb(lv_event_t *e);
+static void setup_ta_focus_cb(lv_event_t *e);
 static void schedule_prefs_load(void);
 static void schedule_prefs_save(void);
 static void schedule_apply_to_ui(void);
+
+// Forward declarations for zip/forecast helpers
+static void build_forecast_url(void);
+static void zip_prefs_load(void);
+static void zip_prefs_save(void);
+static bool lookup_zip(const char* zip);
 
 // ============================================================
 // Gesture navigation
@@ -106,9 +113,9 @@ static void gesture_event_cb(lv_event_t *e)
     } else if (scr == ui_screenlogger && dir == LV_DIR_RIGHT) {
         _ui_screen_change(&ui_screentimer,    LV_SCR_LOAD_ANIM_MOVE_RIGHT, 200, 0, &ui_screentimer_screen_init);
     } else if (scr == ui_screenlogger && dir == LV_DIR_LEFT) {
-        _ui_screen_change(&ui_screenschedule, LV_SCR_LOAD_ANIM_MOVE_LEFT,  200, 0, &ui_screenschedule_screen_init);
-    } else if (scr == ui_screenschedule && dir == LV_DIR_RIGHT) {
-        _ui_screen_change(&ui_screenlogger,   LV_SCR_LOAD_ANIM_MOVE_RIGHT, 200, 0, &ui_screenlogger_screen_init);
+        _ui_screen_change(&ui_screensetup,  LV_SCR_LOAD_ANIM_MOVE_LEFT,  200, 0, &ui_screensetup_screen_init);
+    } else if (scr == ui_screensetup && dir == LV_DIR_RIGHT) {
+        _ui_screen_change(&ui_screenlogger, LV_SCR_LOAD_ANIM_MOVE_RIGHT, 200, 0, &ui_screenlogger_screen_init);
     } else {
         return;
     }
@@ -155,15 +162,17 @@ void ui_app_init(void)
     lv_obj_add_event_cb(ui_txtTimerStartValue, timer_input_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
     lv_obj_add_event_cb(ui_swtModeMinOrSec,    timer_input_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
 
-    // Load persisted schedule settings and push to widgets
+    // Load persisted settings and push to widgets
     schedule_prefs_load();
+    zip_prefs_load();
     schedule_apply_to_ui();
 
-    // Schedule screen
-    lv_obj_add_event_cb(ui_screenschedule,  gesture_event_cb,     LV_EVENT_GESTURE, NULL);
-    lv_obj_add_event_cb(ui_txtSleepTime,    schedule_sleep_ta_cb, LV_EVENT_CLICKED,  NULL);
-    lv_obj_add_event_cb(ui_txtWakeTime,     schedule_wake_ta_cb,  LV_EVENT_CLICKED,  NULL);
-    lv_obj_add_event_cb(ui_btnSaveSchedule, schedule_save_cb,     LV_EVENT_CLICKED,  NULL);
+    // Setup screen
+    lv_obj_add_event_cb(ui_screensetup,     gesture_event_cb,     LV_EVENT_GESTURE, NULL);
+    lv_obj_add_event_cb(ui_txtSleepTime, setup_ta_focus_cb, LV_EVENT_FOCUSED, NULL);
+    lv_obj_add_event_cb(ui_txtWakeTime,  setup_ta_focus_cb, LV_EVENT_FOCUSED, NULL);
+    lv_obj_add_event_cb(ui_txtZipCode,   setup_ta_focus_cb, LV_EVENT_FOCUSED, NULL);
+    lv_obj_add_event_cb(ui_btnSaveSettings, schedule_save_cb,     LV_EVENT_CLICKED,  NULL);
 }
 
 // ============================================================
@@ -295,6 +304,12 @@ void ui_timer_tick(uint32_t now_ms)
 // Schedule state machine
 // ============================================================
 
+// ZIP / forecast settings (declared here so schedule_save_cb can access them)
+static float zip_lat  = 30.37f;
+static float zip_lon  = -97.75f;
+static char  zip_code[10] = "78731";
+static char  open_meteo_url[256];
+
 static int      sched_sleep_h       = 22;   // default 10:00 PM
 static int      sched_sleep_m       = 0;
 static int      sched_wake_h        = 7;    // default 7:00 AM
@@ -343,26 +358,20 @@ static void schedule_apply_to_ui(void)
             else    lv_obj_clear_state(swt, LV_STATE_CHECKED);
         }
     };
-    set_time(sched_sleep_h, sched_sleep_m, ui_txtSleepTime, ui_swtSleepAmPm);
-    set_time(sched_wake_h,  sched_wake_m,  ui_txtWakeTime,  ui_swtWakeAmPm);
+    set_time(sched_sleep_h, sched_sleep_m, ui_txtSleepTime, NULL);
+    set_time(sched_wake_h,  sched_wake_m,  ui_txtWakeTime,  NULL);
     if (ui_swtScheduleEnable) {
         if (schedule_enabled) lv_obj_add_state(ui_swtScheduleEnable,  LV_STATE_CHECKED);
         else                  lv_obj_clear_state(ui_swtScheduleEnable, LV_STATE_CHECKED);
     }
+    if (ui_txtZipCode) lv_textarea_set_text(ui_txtZipCode, zip_code);
 }
 
-static void schedule_sleep_ta_cb(lv_event_t *e)
+static void setup_ta_focus_cb(lv_event_t *e)
 {
-    (void)e;
-    if (ui_kbSchedule && ui_txtSleepTime)
-        lv_keyboard_set_textarea(ui_kbSchedule, ui_txtSleepTime);
-}
-
-static void schedule_wake_ta_cb(lv_event_t *e)
-{
-    (void)e;
-    if (ui_kbSchedule && ui_txtWakeTime)
-        lv_keyboard_set_textarea(ui_kbSchedule, ui_txtWakeTime);
+    lv_obj_t *ta = lv_event_get_target(e);
+    if (ui_kbSetupInput && ta)
+        lv_keyboard_set_textarea(ui_kbSetupInput, ta);
 }
 
 // Parses a 4-digit HHMM textarea + AM/PM switch into 24-hour h/m.
@@ -377,11 +386,16 @@ static bool parse_hhmm(lv_obj_t *ta, lv_obj_t *ampm_swt, int *out_h, int *out_m)
     }
     int hh = (txt[0] - '0') * 10 + (txt[1] - '0');
     int mm = (txt[2] - '0') * 10 + (txt[3] - '0');
-    if (hh < 1 || hh > 12) return false;
+    if (hh > 23) return false;
     if (mm > 59) return false;
-    bool is_pm = ampm_swt && lv_obj_has_state(ampm_swt, LV_STATE_CHECKED);
-    if (hh == 12) hh = 0;   // 12:xx → 0 before applying PM offset
-    if (is_pm)    hh += 12; // 0+12=12 (noon), 1..11+12=13..23
+    if (hh <= 12) {
+        // 12-hour input — apply AM/PM switch
+        if (hh < 1) return false;
+        bool is_pm = ampm_swt && lv_obj_has_state(ampm_swt, LV_STATE_CHECKED);
+        if (hh == 12) hh = 0;
+        if (is_pm)    hh += 12;
+    }
+    // else: 13–23 treated as 24-hour directly, AM/PM switch ignored
     *out_h = hh;
     *out_m = mm;
     return true;
@@ -391,10 +405,10 @@ static void schedule_save_cb(lv_event_t *e)
 {
     (void)e;
     int sh, sm, wh, wm;
-    bool sleep_ok = parse_hhmm(ui_txtSleepTime, ui_swtSleepAmPm, &sh, &sm);
-    bool wake_ok  = parse_hhmm(ui_txtWakeTime,  ui_swtWakeAmPm,  &wh, &wm);
+    bool sleep_ok = parse_hhmm(ui_txtSleepTime, NULL, &sh, &sm);
+    bool wake_ok  = parse_hhmm(ui_txtWakeTime,  NULL, &wh, &wm);
     if (!sleep_ok || !wake_ok) {
-        ui_log("Schedule: invalid time — enter 4 digits (HHMM), hour 01-12");
+        ui_log("Schedule: invalid time — enter 4 digits HHMM (12h: 0100-1259 + AM/PM, or 24h: 0000-2359)");
         return;
     }
     sched_sleep_h    = sh;
@@ -406,6 +420,24 @@ static void schedule_save_cb(lv_event_t *e)
     schedule_prefs_save();
     ui_log("Schedule: sleep=%02d:%02d  wake=%02d:%02d  enabled=%s",
            sh, sm, wh, wm, schedule_enabled ? "yes" : "no");
+
+    // Handle zip code change
+    if (ui_txtZipCode) {
+        const char* new_zip = lv_textarea_get_text(ui_txtZipCode);
+        if (new_zip && strlen(new_zip) == 5 && strcmp(new_zip, zip_code) != 0) {
+            ui_log("ZIP: looking up %s...", new_zip);
+            if (lookup_zip(new_zip)) {
+                strncpy(zip_code, new_zip, sizeof(zip_code) - 1);
+                zip_prefs_save();
+                build_forecast_url();
+                ui_log("ZIP: %s -> lat=%.4f lon=%.4f", zip_code, zip_lat, zip_lon);
+                ui_update_forecast();
+            } else {
+                ui_log("ZIP: lookup failed for %s — keeping %s", new_zip, zip_code);
+                lv_textarea_set_text(ui_txtZipCode, zip_code);  // revert UI
+            }
+        }
+    }
 }
 
 bool ui_sleep_intercept_touch(void)
@@ -605,6 +637,169 @@ void ui_update_sensor_timestamp(const char* ts)
         snprintf(buf, sizeof(buf), "Humidity - %s", ts_short);
         lv_label_set_text(ui_lblHumidity, buf);
     }
+}
+
+// ============================================================
+// Weather forecast (Open-Meteo, no API key required)
+// ============================================================
+
+static void build_forecast_url(void) {
+    snprintf(open_meteo_url, sizeof(open_meteo_url),
+        "https://api.open-meteo.com/v1/forecast"
+        "?latitude=%.4f&longitude=%.4f"
+        "&daily=weathercode,temperature_2m_max,temperature_2m_min"
+        "&temperature_unit=fahrenheit"
+        "&timezone=America%%2FChicago"
+        "&forecast_days=6",
+        zip_lat, zip_lon);
+}
+
+static void zip_prefs_load(void) {
+    Preferences p;
+    if (p.begin("zipcode", true)) {
+        p.getString("zip", zip_code, sizeof(zip_code));
+        zip_lat = p.getFloat("lat", 30.37f);
+        zip_lon = p.getFloat("lon", -97.75f);
+        p.end();
+    }
+    build_forecast_url();
+}
+
+static void zip_prefs_save(void) {
+    Preferences p;
+    p.begin("zipcode", false);
+    p.putString("zip", zip_code);
+    p.putFloat("lat", zip_lat);
+    p.putFloat("lon", zip_lon);
+    p.end();
+}
+
+// Calls api.zippopotam.us to resolve a US zip code to lat/lon.
+// Updates zip_lat/zip_lon and returns true on success.
+static bool lookup_zip(const char* zip) {
+    if (WiFi.status() != WL_CONNECTED) return false;
+    char url[64];
+    snprintf(url, sizeof(url), "https://api.zippopotam.us/us/%s", zip);
+    HTTPClient http;
+    http.begin(url);
+    int code = http.GET();
+    if (code != HTTP_CODE_OK) {
+        ui_log("ZIP lookup: HTTP %d for %s", code, zip);
+        http.end();
+        return false;
+    }
+    String payload = http.getString();
+    http.end();
+    StaticJsonDocument<512> doc;
+    if (deserializeJson(doc, payload) != DeserializationError::Ok) return false;
+    JsonArray places = doc["places"];
+    if (places.isNull() || places.size() == 0) return false;
+    const char* lat_s = places[0]["latitude"]  | "";
+    const char* lon_s = places[0]["longitude"] | "";
+    if (!lat_s[0] || !lon_s[0]) return false;
+    zip_lat = atof(lat_s);
+    zip_lon = atof(lon_s);
+    return true;
+}
+
+static const lv_img_dsc_t* wmo_to_icon(int code) {
+    if (code == 0)                                               return &ui_img_sunnyday_png;
+    if (code <= 3 || code == 45 || code == 48)                  return &ui_img_partlycloudy_png;
+    if ((code >= 71 && code <= 77) || code == 85 || code == 86) return &ui_img_snowrainmix_png;
+    if (code >= 95)                                              return &ui_img_thunderstorms_png;
+    if (code >= 51)                                              return &ui_img_heavyrain_png;
+    return &ui_img_partlycloudy_png;
+}
+
+// Tomohiko Sakamoto algorithm — returns 0=Sun through 6=Sat
+static int day_of_week(int y, int m, int d) {
+    static const int t[] = {0,3,2,5,0,3,5,1,4,6,2,4};
+    if (m < 3) y--;
+    return (y + y/4 - y/100 + y/400 + t[m-1] + d) % 7;
+}
+
+void ui_update_forecast(void) {
+    if (WiFi.status() != WL_CONNECTED) {
+        ui_log("Forecast: WiFi not connected, skipping");
+        return;
+    }
+    HTTPClient http;
+    http.begin(open_meteo_url);
+    int httpCode = http.GET();
+    if (httpCode != HTTP_CODE_OK) {
+        ui_log("Forecast: HTTP error %d", httpCode);
+        http.end();
+        return;
+    }
+    String payload = http.getString();
+    http.end();
+
+    StaticJsonDocument<1536> doc;
+    DeserializationError err = deserializeJson(doc, payload);
+    if (err != DeserializationError::Ok) {
+        ui_log("Forecast: JSON error: %s", err.c_str());
+        return;
+    }
+
+    JsonArray times    = doc["daily"]["time"];
+    JsonArray codes    = doc["daily"]["weathercode"];
+    JsonArray maxTemps = doc["daily"]["temperature_2m_max"];
+    JsonArray minTemps = doc["daily"]["temperature_2m_min"];
+    if (times.isNull() || times.size() < 6) {
+        ui_log("Forecast: unexpected JSON structure");
+        return;
+    }
+
+    // Day 0 → today's high/low label + current weather icon
+    {
+        float hi = maxTemps[0] | 0.0f;
+        float lo = minTemps[0] | 0.0f;
+        if (ui_lblCurrentDayHighLowTemp) {
+            char buf[16];
+            snprintf(buf, sizeof(buf), "%d | %d", (int)lo, (int)hi);
+            lv_label_set_text(ui_lblCurrentDayHighLowTemp, buf);
+        }
+        if (ui_imgCurrentWeather)
+            lv_img_set_src(ui_imgCurrentWeather, wmo_to_icon(codes[0] | 0));
+    }
+
+    // Days 1–5 → forecast panels D0–D4
+    static const char* DOW[]    = {"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
+    static const char* MONTHS[] = {"Jan","Feb","Mar","Apr","May","Jun",
+                                   "Jul","Aug","Sep","Oct","Nov","Dec"};
+    lv_obj_t* day_lbls[]  = { ui_lblForecastDayD0,  ui_lblForecastDayD1,  ui_lblForecastDayD2,
+                               ui_lblForecastDayD3,  ui_lblForecastDayD4 };
+    lv_obj_t* temp_lbls[] = { ui_lblForecastTempD0, ui_lblForecastTempD1, ui_lblForecastTempD2,
+                               ui_lblForecastTempD3, ui_lblForecastTempD4 };
+    lv_obj_t* img_wgts[]  = { ui_imgForecastD0, ui_imgForecastD1, ui_imgForecastD2,
+                               ui_imgForecastD3, ui_imgForecastD4 };
+
+    for (int i = 0; i < 5; i++) {
+        int api_idx = i + 1;
+        const char* date_str = times[api_idx] | "";
+        int   wmo = codes[api_idx]    | 0;
+        float hi  = maxTemps[api_idx] | 0.0f;
+        float lo  = minTemps[api_idx] | 0.0f;
+
+        if (day_lbls[i]) {
+            int y = 0, m = 0, d = 0;
+            if (sscanf(date_str, "%d-%d-%d", &y, &m, &d) == 3 && m >= 1 && m <= 12) {
+                char buf[16];
+                snprintf(buf, sizeof(buf), "%s, %s %d",
+                         DOW[day_of_week(y, m, d)], MONTHS[m - 1], d);
+                lv_label_set_text(day_lbls[i], buf);
+            }
+        }
+        if (temp_lbls[i]) {
+            char buf[16];
+            snprintf(buf, sizeof(buf), "%d | %d", (int)lo, (int)hi);
+            lv_label_set_text(temp_lbls[i], buf);
+        }
+        if (img_wgts[i])
+            lv_img_set_src(img_wgts[i], wmo_to_icon(wmo));
+    }
+
+    ui_log("Forecast: updated 6-day forecast");
 }
 
 // ============================================================

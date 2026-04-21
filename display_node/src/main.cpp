@@ -138,6 +138,7 @@ const char* NTP_TZ     = "CST6CDT,M3.2.0,M11.1.0";
 const char* NTP_SERVER = "pool.ntp.org";
 static bool timeInitialized = false;
 static uint32_t lv_tick_prev = 0;
+static unsigned long lastForecastFetch = 0;
 static char garage_known_state[8] = "";  // last state set by an "event" message
 
 // Delay while keeping LVGL ticking so the display keeps updating.
@@ -222,18 +223,29 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
 void connectWiFi() {
     ui_log("Connecting to WiFi...");
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-    int attempts = 0;
-    while (WiFi.status() != WL_CONNECTED && attempts < 40) {
-        lv_delay_ms(500);
-        attempts++;
+    WiFi.persistent(false);   // don't write credentials to flash on every connect
+    WiFi.setAutoReconnect(false);  // we manage reconnects manually
+
+    for (int attempt = 1; attempt <= 3; attempt++) {
+        // Reset radio state before each attempt — prevents stale state after crash/fast-reboot
+        WiFi.disconnect(true);
+        WiFi.mode(WIFI_OFF);
+        lv_delay_ms(100);
+        WiFi.mode(WIFI_STA);
+        WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+        int ticks = 0;
+        while (WiFi.status() != WL_CONNECTED && ticks < 40) {
+            lv_delay_ms(500);
+            ticks++;
+        }
+        if (WiFi.status() == WL_CONNECTED) {
+            ui_log("WiFi connected (attempt %d), IP: %s", attempt, WiFi.localIP().toString().c_str());
+            return;
+        }
+        ui_log("WiFi attempt %d/3 failed, retrying...", attempt);
     }
-    if (WiFi.status() == WL_CONNECTED) {
-        ui_log("WiFi connected, IP: %s", WiFi.localIP().toString().c_str());
-    } else {
-        ui_log("ERROR: WiFi connection failed");
-    }
+    ui_log("ERROR: WiFi connection failed after 3 attempts");
 }
 
 void initNTP() {
@@ -332,12 +344,14 @@ void setup() {
 
     // WiFi + MQTT — log messages appear on screen as they happen
     connectWiFi();
-    initNTP();  // Initialize NTP after WiFi connects
+    if (WiFi.status() == WL_CONNECTED) initNTP();
     wifiClientSecure.setInsecure();
     mqttClient.setServer(MQTT_HOST, MQTT_PORT);
     mqttClient.setCallback(mqttCallback);
     mqttClient.setBufferSize(512);
     connectMQTT();
+    ui_update_forecast();
+    lastForecastFetch = millis();
 
     // Setup complete — hand off to dashboard
     ui_log("Setup complete, loading dashboard...");
@@ -377,6 +391,12 @@ void loop() {
         if (getLocalTime(&sched_tm)) ui_schedule_tick(&sched_tm);
     }
 
+    // Weather forecast fetch — every 30 minutes
+    if (millis() - lastForecastFetch >= 30UL * 60UL * 1000UL) {
+        lastForecastFetch = millis();
+        ui_update_forecast();
+    }
+
     // Reconnect if needed
     if (WiFi.status() != WL_CONNECTED) {
         connectWiFi();
@@ -384,10 +404,20 @@ void loop() {
     if (!timeInitialized && WiFi.status() == WL_CONNECTED) {
         initNTP();
     }
-    if (!mqttClient.connected()) {
+    // Fetch forecast when WiFi first becomes available after a disconnect
+    // (prevWifiConnected=true so a successful setup() connect doesn't double-fetch)
+    static bool prevWifiConnected = true;
+    bool wifiNowConnected = (WiFi.status() == WL_CONNECTED);
+    if (wifiNowConnected && !prevWifiConnected) {
+        ui_update_forecast();
+        lastForecastFetch = millis();
+    }
+    prevWifiConnected = wifiNowConnected;
+
+    if (WiFi.status() == WL_CONNECTED && !mqttClient.connected()) {
         connectMQTT();
     }
-    mqttClient.loop();
+    if (WiFi.status() == WL_CONNECTED) mqttClient.loop();
 
     ui_timer_tick(now);
     ui_schedule_check(now);
