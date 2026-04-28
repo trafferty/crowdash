@@ -511,10 +511,10 @@ void ui_update_time(const char* time_str, const char* date_str)
 // ============================================================
 void ui_update_outdoor_temp(float temp_f)
 {
-    if (!ui_lblCurrentTemp) return;
+    if (!ui_lblTempD0) return;
     char buf[16];
     snprintf(buf, sizeof(buf), "%.0f F", temp_f);
-    lv_label_set_text(ui_lblCurrentTemp, buf);
+    lv_label_set_text(ui_lblTempD0, buf);
 }
 
 void ui_chart_add_point(float temp_f, float humidity)
@@ -534,10 +534,10 @@ void ui_chart_add_point(float temp_f, float humidity)
     lv_chart_refresh(ui_chtHumidity);
 
     // Also update the current humidity label
-    if (ui_lblCurrentHumidity) {
+    if (ui_lblHumidityD0) {
         char buf[12];
         snprintf(buf, sizeof(buf), "%.0f%%", humidity);
-        lv_label_set_text(ui_lblCurrentHumidity, buf);
+        lv_label_set_text(ui_lblHumidityD0, buf);
     }
 }
 
@@ -647,7 +647,7 @@ static void build_forecast_url(void) {
     snprintf(open_meteo_url, sizeof(open_meteo_url),
         "https://api.open-meteo.com/v1/forecast"
         "?latitude=%.4f&longitude=%.4f"
-        "&daily=weathercode,temperature_2m_max,temperature_2m_min"
+        "&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max"
         "&temperature_unit=fahrenheit"
         "&timezone=America%%2FChicago"
         "&forecast_days=6",
@@ -703,12 +703,30 @@ static bool lookup_zip(const char* zip) {
 }
 
 static const lv_img_dsc_t* wmo_to_icon(int code) {
-    if (code == 0)                                               return &ui_img_sunnyday_png;
-    if (code <= 3 || code == 45 || code == 48)                  return &ui_img_partlycloudy_png;
-    if ((code >= 71 && code <= 77) || code == 85 || code == 86) return &ui_img_snowrainmix_png;
-    if (code >= 95)                                              return &ui_img_thunderstorms_png;
-    if (code >= 51)                                              return &ui_img_heavyrain_png;
-    return &ui_img_partlycloudy_png;
+    switch (code) {
+        case 0: case 1:
+            return &ui_img_sunnyday_png;
+        case 2:
+            return &ui_img_partlycloudy_png;
+        case 3: case 45: case 48:
+            return &ui_img_cloudy_png;
+        case 51: case 53: case 55: case 80:
+            return &ui_img_scatteredrain_png;
+        case 61: case 63: case 81:
+            return &ui_img_rain_png;
+        case 65: case 82:
+            return &ui_img_heavyrain_png;
+        case 66: case 67:
+            return &ui_img_snowrainmix_png;
+        case 71: case 73: case 75: case 77: case 85: case 86:
+            return &ui_img_snow_png;
+        case 95:
+            return &ui_img_scatteredthunderstorms_png;
+        case 96: case 99:
+            return &ui_img_thunderstorms_png;
+        default:
+            return &ui_img_partlycloudy_png;
+    }
 }
 
 // Tomohiko Sakamoto algorithm — returns 0=Sun through 6=Sat
@@ -745,41 +763,67 @@ void ui_update_forecast(void) {
     JsonArray codes    = doc["daily"]["weathercode"];
     JsonArray maxTemps = doc["daily"]["temperature_2m_max"];
     JsonArray minTemps = doc["daily"]["temperature_2m_min"];
+    JsonArray rainProb = doc["daily"]["precipitation_probability_max"];
     if (times.isNull() || times.size() < 6) {
         ui_log("Forecast: unexpected JSON structure");
         return;
     }
 
-    // Day 0 → today's high/low label + current weather icon
+    // Day 0 → today's hi/lo labels + weather icon (D0 panel)
     {
         float hi = maxTemps[0] | 0.0f;
         float lo = minTemps[0] | 0.0f;
-        if (ui_lblCurrentDayHighLowTemp) {
-            char buf[16];
-            snprintf(buf, sizeof(buf), "%d | %d", (int)lo, (int)hi);
-            lv_label_set_text(ui_lblCurrentDayHighLowTemp, buf);
+        char buf[8];
+        if (ui_lblForecastTempHiD0) {
+            snprintf(buf, sizeof(buf), "%d", (int)hi);
+            lv_label_set_text(ui_lblForecastTempHiD0, buf);
         }
-        if (ui_imgCurrentWeather)
-            lv_img_set_src(ui_imgCurrentWeather, wmo_to_icon(codes[0] | 0));
+        if (ui_lblForecastTempLoD0) {
+            snprintf(buf, sizeof(buf), "%d", (int)lo);
+            lv_label_set_text(ui_lblForecastTempLoD0, buf);
+        }
+        if (ui_imgForecastD0)
+            lv_img_set_src(ui_imgForecastD0, wmo_to_icon(codes[0] | 0));
+        if (ui_lblForecastRainChanceD0) {
+            snprintf(buf, sizeof(buf), "%d%%", rainProb[0] | 0);
+            lv_label_set_text(ui_lblForecastRainChanceD0, buf);
+        }
     }
 
-    // Days 1–5 → forecast panels D0–D4
+    // Days 1–5 → forecast panels D1–D5
     static const char* DOW[]    = {"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
     static const char* MONTHS[] = {"Jan","Feb","Mar","Apr","May","Jun",
                                    "Jul","Aug","Sep","Oct","Nov","Dec"};
-    lv_obj_t* day_lbls[]  = { ui_lblForecastDayD0,  ui_lblForecastDayD1,  ui_lblForecastDayD2,
-                               ui_lblForecastDayD3,  ui_lblForecastDayD4 };
-    lv_obj_t* temp_lbls[] = { ui_lblForecastTempD0, ui_lblForecastTempD1, ui_lblForecastTempD2,
-                               ui_lblForecastTempD3, ui_lblForecastTempD4 };
-    lv_obj_t* img_wgts[]  = { ui_imgForecastD0, ui_imgForecastD1, ui_imgForecastD2,
-                               ui_imgForecastD3, ui_imgForecastD4 };
+    lv_obj_t* day_lbls[]  = { ui_lblForecastDayD1, ui_lblForecastDayD2, ui_lblForecastDayD3,
+                               ui_lblForecastDayD4, ui_lblForecastDayD5 };
+    lv_obj_t* hi_lbls[]   = { ui_lblForecastTempHiD1, ui_lblForecastTempHiD2, ui_lblForecastTempHiD3,
+                               ui_lblForecastTempHiD4, ui_lblForecastTempHiD5 };
+    lv_obj_t* lo_lbls[]   = { ui_lblForecastTempLoD1, ui_lblForecastTempLoD2, ui_lblForecastTempLoD3,
+                               ui_lblForecastTempLoD4, ui_lblForecastTempLoD5 };
+    lv_obj_t* img_wgts[]  = { ui_imgForecastD1, ui_imgForecastD2, ui_imgForecastD3,
+                               ui_imgForecastD4, ui_imgForecastD5 };
+    lv_obj_t* rain_lbls[] = { ui_lblForecastRainChanceD1, ui_lblForecastRainChanceD2, ui_lblForecastRainChanceD3,
+                               ui_lblForecastRainChanceD4, ui_lblForecastRainChanceD5 };
+    lv_obj_t* sld_wgts[]  = { ui_sldTempRangeD1, ui_sldTempRangeD2, ui_sldTempRangeD3,
+                               ui_sldTempRangeD4, ui_sldTempRangeD5 };
+
+    // Collect hi/lo temps for shared slider range
+    int hi_vals[5], lo_vals[5];
+    int range_min = 999, range_max = -999;
+    for (int i = 0; i < 5; i++) {
+        int api_idx = i + 1;
+        hi_vals[i] = (int)(maxTemps[api_idx] | 0.0f);
+        lo_vals[i] = (int)(minTemps[api_idx] | 0.0f);
+        if (lo_vals[i] < range_min) range_min = lo_vals[i];
+        if (hi_vals[i] > range_max) range_max = hi_vals[i];
+    }
+    range_min -= 5;
+    range_max += 5;
 
     for (int i = 0; i < 5; i++) {
         int api_idx = i + 1;
         const char* date_str = times[api_idx] | "";
-        int   wmo = codes[api_idx]    | 0;
-        float hi  = maxTemps[api_idx] | 0.0f;
-        float lo  = minTemps[api_idx] | 0.0f;
+        int wmo = codes[api_idx] | 0;
 
         if (day_lbls[i]) {
             int y = 0, m = 0, d = 0;
@@ -790,13 +834,26 @@ void ui_update_forecast(void) {
                 lv_label_set_text(day_lbls[i], buf);
             }
         }
-        if (temp_lbls[i]) {
-            char buf[16];
-            snprintf(buf, sizeof(buf), "%d | %d", (int)lo, (int)hi);
-            lv_label_set_text(temp_lbls[i], buf);
+        char buf[8];
+        if (hi_lbls[i]) {
+            snprintf(buf, sizeof(buf), "%d", hi_vals[i]);
+            lv_label_set_text(hi_lbls[i], buf);
+        }
+        if (lo_lbls[i]) {
+            snprintf(buf, sizeof(buf), "%d", lo_vals[i]);
+            lv_label_set_text(lo_lbls[i], buf);
+        }
+        if (sld_wgts[i]) {
+            lv_slider_set_range(sld_wgts[i], range_min, range_max);
+            lv_slider_set_left_value(sld_wgts[i], lo_vals[i], LV_ANIM_OFF);
+            lv_slider_set_value(sld_wgts[i], hi_vals[i], LV_ANIM_OFF);
         }
         if (img_wgts[i])
             lv_img_set_src(img_wgts[i], wmo_to_icon(wmo));
+        if (rain_lbls[i]) {
+            snprintf(buf, sizeof(buf), "%d%%", rainProb[api_idx] | 0);
+            lv_label_set_text(rain_lbls[i], buf);
+        }
     }
 
     ui_log("Forecast: updated 6-day forecast");

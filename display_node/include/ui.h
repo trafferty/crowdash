@@ -37,13 +37,18 @@ extern "C" {
 extern lv_obj_t *ui____initial_actions0;
 
 // IMAGES AND IMAGE SETS
-LV_IMG_DECLARE( ui_img_snowrainmix_png);   // assets/SnowRainMix.png
-LV_IMG_DECLARE( ui_img_rt_arrow_png);   // assets/rt_arrow.png
-LV_IMG_DECLARE( ui_img_partlycloudy_png);   // assets/PartlyCloudy.png
-LV_IMG_DECLARE( ui_img_heavyrain_png);   // assets/HeavyRain.png
-LV_IMG_DECLARE( ui_img_sunnyday_png);   // assets/SunnyDay.png
+LV_IMG_DECLARE( ui_img_scatteredthunderstorms_png);   // assets/ScatteredThunderstorms.png
 LV_IMG_DECLARE( ui_img_thunderstorms_png);   // assets/Thunderstorms.png
+LV_IMG_DECLARE( ui_img_rt_arrow_png);   // assets/rt_arrow.png
 LV_IMG_DECLARE( ui_img_lt_arrow_png);   // assets/lt_arrow.png
+LV_IMG_DECLARE( ui_img_sunnyday_png);   // assets/SunnyDay.png
+LV_IMG_DECLARE( ui_img_partlycloudy_png);   // assets/PartlyCloudy.png
+LV_IMG_DECLARE( ui_img_cloudy_png);   // assets/Cloudy.png
+LV_IMG_DECLARE( ui_img_scatteredrain_png);   // assets/ScatteredRain.png
+LV_IMG_DECLARE( ui_img_rain_png);   // assets/Rain.png
+LV_IMG_DECLARE( ui_img_heavyrain_png);   // assets/HeavyRain.png
+LV_IMG_DECLARE( ui_img_snowrainmix_png);   // assets/SnowRainMix.png
+LV_IMG_DECLARE( ui_img_snow_png);   // assets/Snow.png
 
 // FONTS
 LV_FONT_DECLARE( ui_font_Big_Number);

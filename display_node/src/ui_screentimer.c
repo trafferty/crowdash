@@ -204,7 +204,7 @@ lv_obj_set_x( ui_txtTimerStartValue, -133 );
 lv_obj_set_y( ui_txtTimerStartValue, 0 );
 lv_obj_set_align( ui_txtTimerStartValue, LV_ALIGN_CENTER );
 lv_textarea_set_max_length(ui_txtTimerStartValue,4);
-lv_textarea_set_text(ui_txtTimerStartValue,"9999");
+lv_textarea_set_text(ui_txtTimerStartValue,"0");
 lv_textarea_set_one_line(ui_txtTimerStartValue,true);
 lv_obj_set_style_text_color(ui_txtTimerStartValue, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT );
 lv_obj_set_style_text_opa(ui_txtTimerStartValue, 255, LV_PART_MAIN| LV_STATE_DEFAULT);

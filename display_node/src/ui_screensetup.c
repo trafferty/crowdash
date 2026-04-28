@@ -119,7 +119,7 @@ lv_obj_set_style_text_font(ui_Label5, &lv_font_montserrat_24, LV_PART_MAIN| LV_S
 ui_lblDisplaySchedule = lv_label_create(ui_pnlDisplaySchedule);
 lv_obj_set_width( ui_lblDisplaySchedule, LV_SIZE_CONTENT);  /// 1
 lv_obj_set_height( ui_lblDisplaySchedule, LV_SIZE_CONTENT);   /// 1
-lv_obj_set_x( ui_lblDisplaySchedule, -15 );
+lv_obj_set_x( ui_lblDisplaySchedule, -23 );
 lv_obj_set_y( ui_lblDisplaySchedule, -94 );
 lv_obj_set_align( ui_lblDisplaySchedule, LV_ALIGN_CENTER );
 lv_label_set_text(ui_lblDisplaySchedule,"Display Schedule");

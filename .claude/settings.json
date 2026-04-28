@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cp /Users/trafferty/src/SquareLineProjects/**)",
+      "Bash(sed -i '' * /Users/trafferty/src/crowdash/display_node/**)",
+      "Bash(git -C /Users/trafferty/src/crowdash diff*)",
+      "Bash(git -C /Users/trafferty/src/crowdash diff --stat*)",
+      "Bash(ls /Users/trafferty/src/crowdash/display_node/**)",
+      "Bash(ls /Users/trafferty/src/SquareLineProjects/**)",
+      "Bash(grep * /Users/trafferty/src/crowdash/display_node/**)",
+      "Bash(pio run*)"
+    ]
+  }
+}
